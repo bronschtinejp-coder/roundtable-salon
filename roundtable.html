@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>回响圆桌 | Echo Roundtable</title>
+  <link rel="stylesheet" href="roundtable.css">
+</head>
+<body>
+  <!-- Password Overlay -->
+  <div class="overlay" id="passwordOverlay">
+    <div class="overlay-box">
+      <h2>🔐 请输入访问密码</h2>
+      <input type="password" id="passwordInput" placeholder="输入密码..." autocomplete="off">
+      <button onclick="checkPassword()">确认</button>
+      <div class="error" id="passwordError"></div>
+    </div>
+  </div>
+
+  <!-- Nickname Overlay -->
+  <div class="overlay hidden" id="nicknameOverlay">
+    <div class="overlay-box">
+      <h2>👋 欢迎来到回响圆桌</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">请输入你的花名，用于标识你的互动</p>
+      <input type="text" id="nicknameInput" placeholder="输入你的花名..." maxlength="20">
+      <button onclick="submitNickname()">进入圆桌</button>
+      <div class="error" id="nicknameError"></div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div style="display:flex; align-items:center;">
+      <a href="#" class="header-title" style="text-decoration:none;">🔥 回响圆桌</a>
+      <span class="header-subtitle">复盘即是对过去决策的回响，通过分享让经验产生二次共鸣</span>
+    </div>
+    <div class="header-nav">
+      <a href="#">首页</a>
+      <a href="#profile">我的档案</a>
+      <a href="http://localhost:8888">← 返回机制库</a>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="container">
+    <div id="app"></div>
+  </div>
+
+  <!-- Case Modal -->
+  <div class="modal-overlay hidden" id="caseModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="caseModalTitle"></div>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" id="caseModalBody"></div>
+    </div>
+  </div>
+
+  <script src="roundtable.js"></script>
+</body>
+</html>
