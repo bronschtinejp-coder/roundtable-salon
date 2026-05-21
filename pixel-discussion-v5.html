@@ -159,15 +159,17 @@
   #insight-body .ins-section{margin-bottom:8px}
   #insight-body .ins-label{font-weight:700;color:#2B5E3A;font-size:10px;margin-bottom:2px}
   #insight-body .ins-people{font-size:9px;color:#8B6B4A;margin-top:8px;padding-top:6px;border-top:1px solid #E8D5B0}
-  #insight-body .ins-questions{margin-top:8px;padding-top:8px;border-top:1px solid #E8D5B0}
-  #insight-body .ins-questions .ins-label{color:#B8901E}
-  #insight-body .ins-q{
-    margin:6px 0;padding:6px 10px;background:#F0E8D0;border-left:3px solid #E8B830;
-    font-size:11px;line-height:1.5;cursor:pointer;transition:background 0.15s;
+
+  /* ═══ AI Proactive Question ═══ */
+  .msg.ai-question{align-self:stretch;max-width:100%}
+  .msg.ai-question .nm{color:#B8901E}
+  .msg.ai-question .nm::before{background:#E8B830 !important}
+  .msg.ai-question .bb{
+    background:#FFFDF5;color:#2A1808;border:2px solid #E8B830;border-radius:2px;
+    font-size:12px;padding:10px 12px;line-height:1.6;
   }
-  #insight-body .ins-q:hover{background:#E8DCC0}
-  #insight-body .ins-q .q-text{color:#2A1808}
-  #insight-body .ins-q .q-context{font-size:9px;color:#8B6B4A;margin-top:2px}
+  .msg.ai-question .aq-label{font-size:9px;color:#B8901E;font-weight:700;margin-bottom:4px}
+  .msg.ai-question .aq-context{font-size:9px;color:#8B6B4A;margin-top:6px;font-style:italic}
 </style>
 </head>
 <body>
@@ -332,7 +334,7 @@ function playSeed(){
   setTimeout(()=>{
     typing.textContent='';addMsg(s.n,s.t);active=si;msgCount++;si++;
     if(si<seed.length)setTimeout(playSeed,1200+Math.random()*800);
-    else setTimeout(()=>{active=-1;scheduleAIFallback();checkInsightCard()},2000);
+    else setTimeout(()=>{active=-1;postSeedAIQuestion()},2000);
   },600+Math.random()*400);
 }
 setTimeout(playSeed,800);
@@ -669,34 +671,75 @@ function checkInsightCard(){
       <div class="ins-section"><div class="ins-label">核心结论</div>抽签/Roguelike玩法融合的成功前提是底层玩法本身足够有趣，随机机制只能放大已有的乐趣而非创造新的。</div>
       <div class="ins-section"><div class="ins-label">主要分歧</div>PVE模式下可以激进放大数值体验 vs 需要控制数值膨胀对长期留存的影响。角色专属流派精度高但工作量大 vs 通用流派适配性强但深度不足。</div>
       <div class="ins-section"><div class="ins-label">可复用经验</div>通用流派意外成为玩家社区讨论热点，兼顾了设计效率与用户参与度，值得中小团队参考。</div>
-      <div class="ins-questions">
-        <div class="ins-label">💬 延伸讨论 · AI追问</div>
-        <div class="ins-q" onclick="fillQuestion(this)">
-          <div class="q-text">通用流派的"深度不足"具体体现在哪些维度？有没有在通用框架下依然做出足够深度的案例？</div>
-          <div class="q-context">基于分歧点：通用流派适配性强但深度不足</div>
-        </div>
-        <div class="ins-q" onclick="fillQuestion(this)">
-          <div class="q-text">数值放大策略在长线运营中如何避免"爽感疲劳"？《星渊纪元》后续版本有没有遇到天花板？</div>
-          <div class="q-context">基于分歧点：数值膨胀对长期留存的影响</div>
-        </div>
-        <div class="ins-q" onclick="fillQuestion(this)">
-          <div class="q-text">如果底层玩法"够好"是前提，那怎么判断底层玩法是否达标？有没有可量化的评估标准？</div>
-          <div class="q-context">基于核心结论：底层玩法质量是前提</div>
-        </div>
-      </div>
       <div class="ins-people">贡献者：阿哲、小棠、青叶、言午、蓝山</div>`;
     document.getElementById('insight-card').classList.add('show');
     msgsEl.scrollTop=msgsEl.scrollHeight+200;
   },1500);
 }
 
-// Fill input with clicked question from insight card
-function fillQuestion(el){
-  const text=el.querySelector('.q-text').textContent;
-  mi.value=text;
-  mi.focus();
-  // Scroll input into view
-  mi.scrollIntoView({behavior:'smooth',block:'center'});
+// ═══════════════════════════════════════
+//  AI Proactive Questions (replaces insight card追问)
+// ═══════════════════════════════════════
+const aiQuestions=[
+  {q:'刚才提到通用流派"深度不足"——具体是指策略深度、构建多样性、还是角色差异化？有没有在通用框架下依然做出足够深度的案例？',ctx:'基于讨论分歧：通用流派适配性强但深度不足'},
+  {q:'数值放大在短期内确实能提升爽感，但长线运营中怎么避免"爽感疲劳"？《星渊纪元》后续版本有没有遇到天花板？',ctx:'基于讨论分歧：数值膨胀对长期留存的影响'},
+  {q:'大家都同意"底层玩法够好"是前提，但怎么判断底层玩法是否达标？有没有可量化的评估标准，还是只能靠体感？',ctx:'基于核心共识：底层玩法质量是前提'},
+  {q:'刚才聊的主要是PVE场景，如果是PVP或竞技向产品，抽签机制的设计逻辑是不是完全不同？有没有人做过这方面的尝试？',ctx:'讨论中尚未覆盖的方向'},
+];
+let aiQIdx=0,userSendCount=0;
+
+// Called once after seed messages finish
+function postSeedAIQuestion(){
+  const q=aiQuestions[aiQIdx++];
+  typing.textContent='AI 正在整理追问…';
+  setTimeout(()=>{
+    typing.textContent='';
+    const d=document.createElement('div');
+    d.className='msg ai-question other';
+    d.setAttribute('data-char','AI追问');
+    d.innerHTML=`
+      <div class="nm">💬 AI · 讨论引导</div>
+      <div class="bb">
+        <div class="aq-label">基于当前讨论，有一个方向值得进一步展开：</div>
+        ${q.q}
+        <div class="aq-context">${q.ctx}</div>
+      </div>
+      <div class="tm">${now()}</div>`;
+    msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+    msgCount++;
+    checkInsightCard();
+    // Start fallback timer after AI question
+    scheduleAIFallback();
+  },1500);
+}
+
+// Called after NPC replies to user messages
+function maybeAIQuestion(){
+  userSendCount++;
+  if(Math.random()<0.4){
+    if(aiQIdx>=aiQuestions.length)return;
+    const q=aiQuestions[aiQIdx++];
+    setTimeout(()=>{
+      typing.textContent='AI 正在整理追问…';
+      setTimeout(()=>{
+        typing.textContent='';
+        const d=document.createElement('div');
+        d.className='msg ai-question other';
+        d.setAttribute('data-char','AI追问');
+        d.innerHTML=`
+          <div class="nm">💬 AI · 讨论引导</div>
+          <div class="bb">
+            <div class="aq-label">基于当前讨论，有一个方向值得进一步展开：</div>
+            ${q.q}
+            <div class="aq-context">${q.ctx}</div>
+          </div>
+          <div class="tm">${now()}</div>`;
+        msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+        msgCount++;
+        checkInsightCard();
+      },1200);
+    },1500+Math.random()*1000);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -774,7 +817,7 @@ function send(){
         if(i<picked.length-1){
           setTimeout(()=>{typing.textContent=picked[i+1].name+' 正在输入…'},400);
         } else {
-          setTimeout(()=>active=-1,2000);
+          setTimeout(()=>{active=-1;maybeAIQuestion()},2000);
         }
       },800+Math.random()*600);
     },delay*i);
