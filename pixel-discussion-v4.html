@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 讨论中</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#1a1220;font-family:'Microsoft YaHei','微软雅黑',sans-serif;
+    overflow:hidden;width:100vw;height:100vh;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #container{
+    width:100vw;height:100vh;max-width:1280px;max-height:720px;
+    aspect-ratio:16/9;display:flex;
+    border:3px solid #3E2210;
+    box-shadow:0 0 40px rgba(0,0,0,0.5);
+  }
+  /* Left: scene */
+  #scene{flex:0 0 50%;position:relative;background:#2A1808}
+  #c{position:absolute;top:0;left:0;width:100%;height:100%;
+     image-rendering:pixelated;image-rendering:crisp-edges}
+  #back{
+    position:absolute;top:12px;left:12px;z-index:5;
+    background:#3E2210;border:2px solid #E8B830;
+    color:#F5E6C8;font-family:'Microsoft YaHei',sans-serif;
+    font-size:11px;font-weight:700;padding:5px 14px;cursor:pointer;
+    transition:all 0.15s;
+  }#back:hover{background:#E8B830;color:#2A1808;border-color:#FFD84D}
+  
+  /* Right: chat panel - Stardew UI style */
+  #chat{
+    flex:1;display:flex;flex-direction:column;
+    background:#F5E6C8;
+    border-left:4px solid #3E2210;
+    font-size:13px;position:relative;
+  }
+  #chat::before{
+    content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(
+      0deg,transparent,transparent 23px,rgba(139,107,74,0.05) 23px,rgba(139,107,74,0.05) 24px
+    );pointer-events:none;z-index:0;
+  }
+  #chat-hdr{
+    padding:14px 16px;font-weight:700;color:#2A1808;
+    border-bottom:3px solid #8B6B4A;text-align:center;
+    font-size:15px;letter-spacing:2px;flex-shrink:0;
+    background:#E8D5B0;position:relative;z-index:1;
+    text-shadow:1px 1px 0 rgba(255,255,255,0.3);
+  }
+  #chat-hdr::after{
+    content:'';position:absolute;bottom:-1px;left:10%;right:10%;
+    height:2px;background:linear-gradient(90deg,transparent,#E8B830,transparent);
+  }
+  #msgs{
+    flex:1;overflow-y:auto;padding:12px 14px;
+    display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;
+    position:relative;z-index:1;
+  }
+  #msgs::-webkit-scrollbar{width:8px}
+  #msgs::-webkit-scrollbar-track{background:#E8D5B0;border-radius:4px}
+  #msgs::-webkit-scrollbar-thumb{background:#8B6B4A;border-radius:4px;border:2px solid #E8D5B0}
+  
+  .msg{display:flex;flex-direction:column;max-width:88%;animation:fIn .3s ease}
+  .msg.self{align-self:flex-end}.msg.other{align-self:flex-start}
+  .msg .nm{font-size:11px;font-weight:700;margin-bottom:3px;padding:0 6px;letter-spacing:1px}
+  .msg.self .nm{text-align:right;color:#8B2020}
+  .msg.other .nm{color:#264653}
+  .msg .bb{
+    padding:9px 12px;font-size:12px;line-height:1.6;word-break:break-word;
+    border:2px solid;position:relative;
+  }
+  .msg.self .bb{
+    background:#3E2210;color:#F5E6C8;border-color:#6B4226;
+    border-radius:2px 2px 0 2px;
+  }
+  .msg.other .bb{
+    background:#FFFDF5;color:#2A1808;border-color:#C8B090;
+    border-radius:2px 2px 2px 0;
+    box-shadow:1px 1px 0 rgba(139,107,74,0.15);
+  }
+  .msg .tm{font-size:9px;color:#8B6B4A;margin-top:3px;padding:0 6px}
+  .msg.self .tm{text-align:right}
+  
+  /* Character color dots */
+  .msg.other .nm::before{
+    content:'';display:inline-block;width:8px;height:8px;
+    border-radius:50%;margin-right:4px;vertical-align:middle;
+    border:1px solid rgba(0,0,0,0.2);
+  }
+  .msg.other[data-char="阿哲"] .nm::before{background:#264653}
+  .msg.other[data-char="小棠"] .nm::before{background:#C84040}
+  .msg.other[data-char="青叶"] .nm::before{background:#2B5E3A}
+  .msg.other[data-char="言午"] .nm::before{background:#E8B830}
+  .msg.other[data-char="蓝山"] .nm::before{background:#4A7BA8}
+  
+  @keyframes fIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  
+  #typing{
+    padding:5px 14px 8px;font-size:11px;color:#8B6B4A;
+    font-style:italic;min-height:22px;flex-shrink:0;
+    position:relative;z-index:1;
+  }
+  #inp-wrap{
+    padding:12px 14px;border-top:3px solid #8B6B4A;
+    display:flex;gap:8px;flex-shrink:0;
+    background:#E8D5B0;position:relative;z-index:1;
+  }
+  #inp-wrap input{
+    flex:1;border:2px solid #8B6B4A;padding:9px 12px;
+    font-family:'Microsoft YaHei',sans-serif;font-size:13px;
+    background:#FFFDF5;color:#2A1808;outline:none;
+    transition:border-color 0.2s;
+  }#inp-wrap input:focus{border-color:#E8B830;box-shadow:0 0 0 1px #E8B830}
+  #inp-wrap input::placeholder{color:#B8A080}
+  #inp-wrap button{
+    border:2px solid #3E2210;background:#3E2210;color:#F5E6C8;
+    font-family:'Microsoft YaHei',sans-serif;font-size:12px;font-weight:700;
+    padding:9px 18px;cursor:pointer;letter-spacing:2px;white-space:nowrap;
+    transition:all 0.15s;
+  }#inp-wrap button:hover{background:#E8B830;color:#2A1808;border-color:#E8B830}
+</style>
+</head>
+<body>
+<div id="container">
+<div id="scene">
+  <canvas id="c"></canvas>
+  <button id="back" onclick="history.back()">← 返回沙龙</button>
+</div>
+<div id="chat">
+  <div id="chat-hdr">讨论中</div>
+  <div id="msgs"></div>
+  <div id="typing"></div>
+  <div id="inp-wrap">
+    <input type="text" id="mi" placeholder="输入你的观点，加入讨论…" maxlength="120"/>
+    <button onclick="send()">发 言</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══ Canvas scene ═══
+const W=640,H=720,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+function sz(){const s=Math.min(scene.clientWidth/W,scene.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
+window.addEventListener('resize',sz);sz();
+function R(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(x|0,y|0,w|0,h|0)}
+
+// Stardew Palette
+const P={
+  wall:'#5C4033',wallL:'#6B4E3D',wallD:'#4A3228',
+  beam:'#3E2812',beamL:'#5A3E1E',trim:'#2E1A0C',
+  wpDark:'#6B4E35',wallpaper:'#8B6B4A',wpLight:'#A07850',
+  floor:'#8B6B4A',floorL:'#A07850',floorD:'#6B4E35',floorH:'#B8925E',
+  wd:'#6B4226',wdL:'#8B5A36',wdD:'#3E2210',wdH:'#A0703C',
+  stone:'#6B6B6B',stoneL:'#8A8A8A',stoneD:'#4A4A4A',
+  fire1:'#FF6B2B',fire2:'#FFAA33',fire3:'#FFD84D',
+  g1:'#2B5E3A',g2:'#3D8B4A',g3:'#5FB066',g4:'#8BC870',
+  gold:'#E8B830',goldL:'#FFD84D',goldD:'#B8901E',
+  red:'#C84040',redD:'#9B2828',
+  blue:'#4A7BA8',blueD:'#2E5C80',
+  purple:'#7B4A8B',
+  rug:'#8B2020',rugG:'#CC8833',rugC:'#AA4420',rugEdge:'#4A0E0E',
+  paper:'#F5E6C8',ink:'#2A1808',
+  sky:'#3A5C8A',skyTop:'#1E3A5C',star:'#FFE8AA',moon:'#E8E0C0',
+  warm:'rgba(255,200,100,',
+  shadow:'rgba(20,10,5,',
+};
+
+const charColors=[
+  {name:'阿哲',sx:'#F4C9A8',hr:'#2D1B0E',hr2:'#4A2C18',hrStyle:'spiky',top:'#264653',t2:'#1D353F',bot:'#3D3D5C',acc:'#4A7BA8'},
+  {name:'小棠',sx:'#FDE0C8',hr:'#5C2E0A',hr2:'#7A3E18',hrStyle:'bob',top:'#C84040',t2:'#9B2828',bot:'#4A4A6A',acc:'#FFD84D'},
+  {name:'青叶',sx:'#F5D6B8',hr:'#1A1A2E',hr2:'#2E2E4A',hrStyle:'short',top:'#2B5E3A',t2:'#1B4332',bot:'#3A3A5A',acc:'#E8B830'},
+  {name:'言午',sx:'#EEBB99',hr:'#4A3520',hr2:'#6B4E30',hrStyle:'tied',top:'#E8B830',t2:'#B8901E',bot:'#3D3A4A',acc:'#C84040'},
+  {name:'蓝山',sx:'#F8D8C0',hr:'#2C1810',hr2:'#4A3020',hrStyle:'neat',top:'#4A7BA8',t2:'#2E5C80',bot:'#3A3A5A',acc:'#E8B830'},
+];
+let frame=0,active=-1;
+
+// ═══ Character Drawing - Stardew Style ═══
+function drawChar(cx,cy,ci,act,f){
+  const s=3.2,ox=cx-6*s,oy=cy-24*s;
+  ctx.save();
+  
+  // Shadow
+  ctx.fillStyle=P.shadow+'0.1)';ctx.beginPath();ctx.ellipse(cx,cy+3,12,3.5,0,0,Math.PI*2);ctx.fill();
+  
+  // Legs
+  R(ox+3*s,oy+18*s,3*s,7*s,ci.bot);
+  R(ox+8*s,oy+18*s,3*s,7*s,ci.bot);
+  R(ox+2.5*s,oy+24.5*s,4*s,2*s,'#2A1A0E');
+  R(ox+7.5*s,oy+24.5*s,4*s,2*s,'#2A1A0E');
+  
+  // Body
+  R(ox+2*s,oy+10*s,10*s,9*s,ci.top);
+  R(ox+2*s,oy+16*s,10*s,2*s,ci.t2);
+  R(ox+5*s,oy+10*s,4*s,2*s,ci.sx);// collar
+  R(ox+2.5*s,oy+17.5*s,9*s,1.5*s,ci.acc);// belt
+  
+  // Arms
+  if(act){
+    R(ox+0.5*s,oy+9*s,2.5*s,8*s,ci.top);
+    R(ox+11*s,oy+8*s,2.5*s,8*s,ci.top);
+    R(ox+0.5*s,oy+16.5*s,2.5*s,2*s,ci.sx);
+    R(ox+11*s,oy+15.5*s,2.5*s,2*s,ci.sx);
+  }else{
+    R(ox+0.5*s,oy+10*s,2.5*s,7*s,ci.top);
+    R(ox+11*s,oy+10*s,2.5*s,7*s,ci.top);
+    R(ox+0.5*s,oy+16.5*s,2.5*s,2*s,ci.sx);
+    R(ox+11*s,oy+16.5*s,2.5*s,2*s,ci.sx);
+  }
+  
+  // Head - hair back
+  R(ox+1*s,oy,12*s,6*s,ci.hr);
+  // Face
+  R(ox+2.5*s,oy+2*s,9*s,7*s,ci.sx);
+  
+  // Hair styles
+  if(ci.hrStyle==='spiky'){
+    R(ox+1*s,oy-2*s,12*s,4*s,ci.hr2);
+    R(ox+3*s,oy-3*s,3*s,3*s,ci.hr);
+    R(ox+7*s,oy-3.5*s,3*s,3*s,ci.hr);
+    R(ox+10*s,oy-2*s,2*s,2*s,ci.hr);
+  }else if(ci.hrStyle==='bob'){
+    R(ox+0.5*s,oy-1*s,13*s,5*s,ci.hr2);
+    R(ox+0.5*s,oy+3*s,3*s,5*s,ci.hr);
+    R(ox+10.5*s,oy+3*s,3*s,5*s,ci.hr);
+    R(ox+4*s,oy-1*s,6*s,2*s,ci.hr2);
+  }else if(ci.hrStyle==='short'){
+    R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);
+    R(ox+1*s,oy+2*s,2*s,3*s,ci.hr);
+  }else if(ci.hrStyle==='tied'){
+    R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);
+    R(ox+11*s,oy+2*s,3*s,8*s,ci.hr);
+    R(ox+12*s,oy+4*s,2*s,2*s,ci.acc);
+  }else if(ci.hrStyle==='neat'){
+    R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);
+    R(ox+2*s,oy+1*s,2*s,2*s,ci.hr);
+    R(ox+10*s,oy+1*s,2*s,2*s,ci.hr);
+  }
+  
+  // Eyes (Stardew style)
+  R(ox+4*s,oy+4*s,2.5*s,2.5*s,'#FFFFFF');
+  R(ox+8*s,oy+4*s,2.5*s,2.5*s,'#FFFFFF');
+  R(ox+4.5*s,oy+4.5*s,1.5*s,1.5*s,'#1A1A2E');
+  R(ox+8.5*s,oy+4.5*s,1.5*s,1.5*s,'#1A1A2E');
+  R(ox+5*s,oy+4*s,1*s,1*s,'#FFFFFF');// shine
+  R(ox+9*s,oy+4*s,1*s,1*s,'#FFFFFF');
+  
+  // Blush
+  R(ox+3*s,oy+6*s,2*s,1*s,'rgba(220,120,120,0.3)');
+  R(ox+9*s,oy+6*s,2*s,1*s,'rgba(220,120,120,0.3)');
+  // Mouth
+  R(ox+6*s,oy+7*s,2*s,1*s,'#8B5555');
+  
+  // Blink
+  if(Math.floor(f/160)%4===0&&f%160<4){
+    R(ox+4*s,oy+4.5*s,2.5*s,1.5*s,ci.sx);
+    R(ox+8*s,oy+4.5*s,2.5*s,1.5*s,ci.sx);
+    R(ox+4*s,oy+5.5*s,2.5*s,1*s,'#2A1A0E');
+    R(ox+8*s,oy+5.5*s,2.5*s,1*s,'#2A1A0E');
+  }
+  
+  // Active speaker glow
+  if(act){
+    ctx.strokeStyle=P.gold;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(ox-3,oy-5,15*s,28*s,3);ctx.stroke();
+    ctx.fillStyle=P.warm+'0.04)';
+    ctx.beginPath();ctx.roundRect(ox-3,oy-5,15*s,28*s,3);ctx.fill();
+    // Speaking indicator
+    const bx2=cx-4,by2=oy-12;
+    R(bx2-2,by2,12,8,P.paper);
+    ctx.fillStyle=P.ink;ctx.font='6px "Microsoft YaHei"';
+    ctx.fillText('...',bx2,by2+6);
+  }
+  
+  // Name
+  ctx.fillStyle=P.paper;ctx.font='bold 8px "Microsoft YaHei"';ctx.textAlign='center';
+  ctx.fillText(ci.name,cx,cy+8);ctx.textAlign='start';
+  ctx.restore();
+}
+
+// ═══ Scene Drawing ═══
+function drawScene(f){
+  // === Room background ===
+  // Wall
+  R(0,0,W,280,P.wall);
+  for(let y=20;y<280;y+=36){
+    R(0,y,W,2,P.wallD);
+    R(0,y+18,W,1,P.wallL+'44');
+  }
+  for(let x=0;x<W;x+=140){
+    R(x,0,3,280,P.wallD);
+  }
+  
+  // Beam
+  R(0,268,W,14,P.beam);R(0,268,W,3,P.beamL);
+  R(0,280,W,4,P.trim);
+  
+  // Wainscoting
+  R(0,284,W,36,P.wpDark);
+  for(let x=0;x<W;x+=70){
+    R(x+4,288,62,28,P.wallpaper);
+    R(x+8,292,54,20,P.wpLight);
+  }
+  R(0,318,W,4,P.trim);
+  
+  // Floor
+  R(0,322,W,H-322,P.floor);
+  for(let y=322;y<H;y+=20){
+    const off=(Math.floor((y-322)/20)%2)*50;
+    for(let x=off;x<W;x+=100){
+      R(x,y,100,20,((x+y)%200<100)?P.floorL:P.floor);
+      R(x,y,100,2,P.floorH+'44');
+      R(x,y+18,100,2,P.floorD);
+      R(x,y,2,20,P.floorD+'88');
+    }
+  }
+  
+  // === Rug ===
+  const rx=120,ry=500,rw=400,rh=120;
+  R(rx,ry,rw,rh,P.rugEdge);
+  R(rx+4,ry+4,rw-8,rh-8,P.rug);
+  R(rx+10,ry+10,rw-20,rh-20,P.rugC);
+  R(rx+16,ry+16,rw-32,rh-32,P.rugG);
+  R(rx+22,ry+22,rw-44,rh-44,P.rug);
+  // Fringe
+  for(let fx=rx+8;fx<rx+rw-8;fx+=10){
+    R(fx,ry-3,3,5,P.rugG);R(fx,ry+rh-2,3,5,P.rugG);
+  }
+  
+  // === Window (night) ===
+  const wx=240,wy=40,ww=160,wh=180;
+  R(wx-6,wy-6,ww+12,wh+12,P.wdD);
+  R(wx-3,wy-3,ww+6,wh+6,P.wd);
+  R(wx,wy,ww,wh,P.skyTop);
+  R(wx,wy+wh/3,ww,wh/3,P.sky);
+  R(wx,wy+2*wh/3,ww,wh/3,'#2A4A6A');
+  // Stars
+  for(let i=0;i<10;i++){
+    const sx2=wx+10+((i*43)%140),sy2=wy+8+((i*67)%80);
+    const tw=Math.sin(f*0.04+i*1.5)>0.2?2:1;
+    R(sx2,sy2,tw,tw,P.star);
+  }
+  // Moon
+  ctx.fillStyle=P.moon;ctx.beginPath();ctx.arc(wx+ww-30,wy+30,12,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=P.skyTop;ctx.beginPath();ctx.arc(wx+ww-24,wy+27,10,0,Math.PI*2);ctx.fill();
+  // Hills & trees
+  R(wx,wy+wh-30,ww,30,'#1A3328');
+  R(wx+20,wy+wh-44,10,20,'#0D2218');R(wx+16,wy+wh-48,18,10,'#0D2218');
+  R(wx+90,wy+wh-50,12,24,'#0D2218');R(wx+85,wy+wh-54,22,12,'#0D2218');
+  R(wx+130,wy+wh-38,8,16,'#0D2218');R(wx+126,wy+wh-42,16,8,'#0D2218');
+  // Window frame cross
+  R(wx+ww/2-2,wy,4,wh,P.wdL);R(wx,wy+wh/2-2,ww,4,P.wdL);
+  // Curtains
+  R(wx-3,wy-3,16,wh+6,'#8B3030');R(wx+ww-13,wy-3,16,wh+6,'#8B3030');
+  R(wx-1,wy+20,4,wh-24,'#6B2020');R(wx+8,wy+20,3,wh-24,'#A04040');
+  R(wx+ww-11,wy+20,4,wh-24,'#6B2020');R(wx+ww-4,wy+20,3,wh-24,'#A04040');
+  
+  // === Fireplace (smaller, right side) ===
+  const fpx=480,fpy=50,fpw=130,fph=180;
+  R(fpx,fpy,fpw,fph,P.stoneD);
+  for(let sy=fpy;sy<fpy+fph;sy+=16){
+    const off2=(Math.floor((sy-fpy)/16)%2)*24;
+    for(let sx=fpx+off2;sx<fpx+fpw;sx+=48){
+      R(sx+1,sy+1,Math.min(46,fpx+fpw-sx-1),14,P.stone);
+    }
+  }
+  // Mantle
+  R(fpx-8,fpy-10,fpw+16,14,P.wdD);R(fpx-6,fpy-8,fpw+12,10,P.wd);R(fpx-6,fpy-8,fpw+12,3,P.wdH);
+  // Firebox
+  const fbx=fpx+25,fby=fpy+50,fbw=80,fbh=fph-55;
+  R(fbx,fby,fbw,fbh,'#1A0A05');
+  ctx.fillStyle=P.stone;ctx.beginPath();
+  ctx.moveTo(fbx,fby+16);ctx.quadraticCurveTo(fbx+fbw/2,fby-10,fbx+fbw,fby+16);
+  ctx.lineTo(fbx+fbw,fby);ctx.lineTo(fbx,fby);ctx.fill();
+  // Fire
+  const t=f*0.08;
+  R(fbx+12,fby+fbh-14,56,10,P.ink+'88');
+  R(fbx+16,fby+fbh-18,20,8,'#5C2200');R(fbx+40,fby+fbh-16,24,6,'#4A1A00');
+  for(let i=0;i<4;i++){
+    const px=fbx+18+i*15,ph=18+Math.sin(t+i*1.8)*8+Math.cos(t*1.5+i)*5;
+    const pw=10+Math.sin(t*0.7+i*2.2)*3;
+    ctx.fillStyle=i%2===0?P.fire1:P.fire2;ctx.beginPath();
+    ctx.moveTo(px,fby+fbh-14);ctx.quadraticCurveTo(px-pw/2,fby+fbh-14-ph*0.6,px+pw*0.3,fby+fbh-14-ph);
+    ctx.quadraticCurveTo(px+pw,fby+fbh-14-ph*0.4,px+pw,fby+fbh-14);ctx.fill();
+  }
+  for(let i=0;i<2;i++){
+    const px=fbx+28+i*20,ph=10+Math.sin(t*1.3+i*2.5)*5;
+    ctx.fillStyle=P.fire3;ctx.beginPath();
+    ctx.moveTo(px,fby+fbh-16);ctx.quadraticCurveTo(px,fby+fbh-16-ph,px+6,fby+fbh-16-ph+3);
+    ctx.quadraticCurveTo(px+8,fby+fbh-18,px+8,fby+fbh-16);ctx.fill();
+  }
+  // Fire glow
+  const ga=0.04+Math.sin(t*1.1)*0.015;
+  ctx.fillStyle=P.warm+ga+')';ctx.beginPath();ctx.arc(fpx+fpw/2,fpy+fph-20,120,0,Math.PI*2);ctx.fill();
+  
+  // === Wall decorations ===
+  // Painting left
+  R(60,80,50,38,P.wdD);R(63,83,44,32,P.wd);R(66,86,38,26,P.sky);
+  R(66,100,38,12,'#3A7040');R(72,96,12,10,'#2B5E3A');R(90,94,8,12,'#2B5E3A');
+  R(94,89,6,6,P.goldL);
+  // Candle sconces
+  const candleX=[30,180,550];
+  candleX.forEach(cx2=>{
+    R(cx2,160,10,7,P.goldD);R(cx2+2,160-2,6,3,P.gold);
+    R(cx2+3,148,4,14,P.paper);
+    const cfh=3+Math.sin(f*0.09+cx2)*1.2;
+    ctx.fillStyle=P.fire2;ctx.beginPath();ctx.moveTo(cx2+3,148);ctx.quadraticCurveTo(cx2+5,148-cfh,cx2+7,148);ctx.fill();
+    ctx.fillStyle=P.warm+'0.04)';ctx.beginPath();ctx.arc(cx2+5,155,16,0,Math.PI*2);ctx.fill();
+  });
+  
+  // === Furniture ===
+  // Round table center
+  const tbx=320,tby=440;
+  ctx.fillStyle=P.shadow+'0.1)';ctx.beginPath();ctx.ellipse(tbx,tby+18,50,12,0,0,Math.PI*2);ctx.fill();
+  R(tbx-8,tby+10,16,20,P.wdD);
+  R(tbx-16,tby+28,32,5,P.wdD);R(tbx-14,tby+30,28,3,P.wd);
+  ctx.fillStyle=P.wdL;ctx.beginPath();ctx.ellipse(tbx,tby,48,12,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=P.wd;ctx.beginPath();ctx.ellipse(tbx,tby-2,44,10,0,0,Math.PI*2);ctx.fill();
+  // Items on table
+  R(tbx-16,tby-10,10,6,'#FFF');R(tbx-14,tby-12,6,3,P.paper);// cup
+  R(tbx+8,tby-10,14,8,P.redD);R(tbx+10,tby-8,10,4,P.paper);// book
+  
+  // Small plant left
+  R(18,420,18,14,'#A05020');R(20,416,14,5,'#8B4018');
+  R(20,400,3,18,P.g1);R(24,396,5,20,P.g2);R(28,402,4,14,P.g3);R(22,394,6,6,P.g4);
+  
+  // Bookshelf right
+  const bsx=570,bsy=320;
+  R(bsx,bsy,50,160,P.wdD);R(bsx+3,bsy+3,44,154,P.wd);
+  for(let sy2=bsy+12;sy2<bsy+150;sy2+=36){
+    R(bsx+3,sy2,44,4,P.wdD);R(bsx+3,sy2,44,2,P.wdH);
+    const bkCols=['#C84040','#264653','#2B5E3A','#E8B830','#8B5E3C','#4A7BA8','#7B4A8B'];
+    let bx2=bsx+7;
+    while(bx2<bsx+44){
+      const bw2=4+((bx2*7+sy2)%3);
+      const bh2=10+((bx2*11+sy2)%10);
+      R(bx2,sy2+4,bw2,bh2,bkCols[(bx2+sy2)%bkCols.length|0]);
+      bx2+=bw2+2;
+    }
+  }
+  
+  // === Characters in semi-circle ===
+  const positions=[
+    {x:140,y:520},{x:240,y:500},{x:340,y:510},{x:440,y:500},{x:520,y:520}
+  ];
+  charColors.forEach((ci,i)=>drawChar(positions[i].x,positions[i].y,ci,i===active,f));
+  
+  // === Hanging lanterns ===
+  [200,420].forEach(lx=>{
+    R(lx+5,240,2,30,P.goldD);
+    R(lx,270,12,16,P.wdD);R(lx+2,272,8,12,'#2A1500');
+    const la=0.35+Math.sin(f*0.06+lx)*0.1;
+    ctx.fillStyle=P.warm+la+')';ctx.beginPath();ctx.arc(lx+6,278,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=P.warm+(la*0.12)+')';ctx.beginPath();ctx.arc(lx+6,278,22,0,Math.PI*2);ctx.fill();
+    R(lx-2,267,16,5,P.goldD);R(lx,269,12,2,P.gold);
+  });
+  
+  // === Dust motes ===
+  for(let i=0;i<8;i++){
+    const dx2=((f*0.3+i*80)%W),dy2=280+Math.sin(f*0.01+i*2)*40+i*30;
+    const da=0.15+Math.sin(f*0.02+i)*0.1;
+    if(dy2>280&&dy2<H-40)R(dx2,dy2,2,2,P.warm+da+')');
+  }
+  
+  // === Ambient glow ===
+  const vg=ctx.createRadialGradient(W/2,H/2,100,W/2,H/2,400);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(10,5,2,0.25)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+  
+  // Topic title overlay at top
+  const topic=params.get('topic')||'知识讨论';
+  ctx.fillStyle='rgba(42,24,8,0.8)';
+  R(0,H-40,W,40,'rgba(42,24,8,0.75)');
+  ctx.fillStyle=P.gold;ctx.font='bold 13px "Microsoft YaHei"';ctx.textAlign='center';
+  ctx.fillText('讨论主题: '+topic,W/2,H-16);
+  ctx.textAlign='start';
+}
+
+// ═══ Chat Logic ═══
+const params=new URLSearchParams(window.location.search);
+const topicTitle=params.get('topic')||'知识讨论';
+document.getElementById('chat-hdr').textContent='讨论: '+topicTitle;
+const msgs=document.getElementById('msgs'),typing=document.getElementById('typing'),mi=document.getElementById('mi');
+
+function now(){const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')}
+function add(n,t,is){
+  const d=document.createElement('div');d.className='msg '+(is?'self':'other');
+  if(!is)d.setAttribute('data-char',n);
+  d.innerHTML=`<div class="nm">${is?'你':n}</div><div class="bb">${t}</div><div class="tm">${now()}</div>`;
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+}
+
+const seed=[
+  {n:'阿哲',t:'我觉得关键还是底层玩法要够好，抽签只是放大器，不能指望它救一个本身不好玩的玩法。'},
+  {n:'小棠',t:'同意。之前我们项目踩过坑，加了一堆随机BUFF玩家完全不买账，数据跟老玩法差不多。'},
+  {n:'青叶',t:'但PVE里面可以放开手脚做——漫威争锋在PVE里直接放大数字体验，玩家爽就完事了。'},
+  {n:'言午',t:'角色适配这块工作量真的很容易爆炸。漫威每个英雄都得单独设计，我们后来搞了通用流派才解决。'},
+  {n:'蓝山',t:'对，通用流派反而成了玩家讨论的热点话题，意外收获。这个经验值得参考。'},
+];
+let si=0;
+function playSeed(){
+  if(si>=seed.length)return;
+  const s=seed[si];
+  typing.textContent=s.n+' 正在输入…';
+  setTimeout(()=>{typing.textContent='';add(s.n,s.t);active=si;si++;
+    if(si<seed.length)setTimeout(playSeed,1200+Math.random()*800);
+    else setTimeout(()=>active=-1,2000);
+  },600+Math.random()*400);
+}setTimeout(playSeed,800);
+
+function send(){
+  const t=mi.value.trim();if(!t)return;mi.value='';add('',t,true);active=-1;
+  const rs=charColors.map(c=>c.name),r=rs[Math.floor(Math.random()*rs.length)];
+  const ri=charColors.findIndex(c=>c.name===r);
+  typing.textContent=r+' 正在输入…';
+  const replies=[
+    '这个角度很有意思，能展开说说具体的案例吗？',
+    '确实，我们之前也遇到过类似的情况。数据上看效果还不错。',
+    '我觉得可以从另一个方向来看这个问题——用户心理模型可能不一样。',
+    '有道理！不过实操层面可能有些挑战，资源和排期都得考虑。',
+    '同意这个判断，跟实际项目里的经验很吻合。值得深入研究。',
+    '这让我想到之前看到的一个案例——做法类似但效果完全不同。',
+    '关键还是要看目标用户群的接受度，不同群体差异很大。',
+  ];
+  setTimeout(()=>{typing.textContent='';add(r,replies[Math.floor(Math.random()*replies.length)]);active=ri;setTimeout(()=>active=-1,2500)},1200+Math.random()*1200);
+}
+mi.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+
+// ═══ Main Loop ═══
+function tick(){frame++;drawScene(frame);requestAnimationFrame(tick)}tick();
+</script>
+</body>
+</html>
