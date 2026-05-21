@@ -77,6 +77,49 @@
   .ai-card .ai-quote{font-size:10px;color:#5C4033;border-left:2px solid #C8B090;padding-left:8px;margin:6px 0;font-style:italic}
   .ai-card .ai-data{display:inline-block;background:#2B5E3A;color:#FFF;font-size:9px;padding:1px 6px;margin-top:4px;font-weight:700;border-radius:1px}
   .ai-card .ai-relevance{font-size:9px;color:#2B5E3A;font-weight:700;margin-top:4px}
+  .ai-card .ai-use-btn{
+    display:inline-block;margin-top:6px;padding:3px 10px;font-size:10px;font-weight:700;
+    background:#E8D5B0;border:1px solid #B8901E;color:#2A1808;cursor:pointer;
+    font-family:'Microsoft YaHei',sans-serif;transition:all 0.15s;
+  }
+  .ai-card .ai-use-btn:hover{background:#E8B830;border-color:#E8B830}
+
+  /* ═══ AI Card Editor ═══ */
+  #ai-editor{
+    display:none;position:absolute;top:0;left:0;bottom:0;z-index:20;
+    width:50%;background:rgba(42,24,8,0.85);
+    flex-direction:column;padding:16px;
+  }
+  #ai-editor.show{display:flex}
+  #ai-editor-box{
+    background:#F5E6C8;border:2px solid #E8B830;
+    flex:1;display:flex;flex-direction:column;animation:fIn .2s ease;
+    overflow:hidden;
+  }
+  #ai-editor-hdr{
+    padding:10px 14px;background:#3E2210;color:#E8B830;font-size:12px;font-weight:700;
+    display:flex;justify-content:space-between;align-items:center;flex-shrink:0;
+  }
+  #ai-editor-hdr span{cursor:pointer;font-size:14px}
+  #ai-editor-hdr span:hover{color:#FFD84D}
+  #ai-editor-src{font-size:10px;color:#8B6B4A;padding:8px 14px;border-bottom:1px solid #E8D5B0;flex-shrink:0}
+  #ai-editor textarea{
+    flex:1;margin:10px 14px;padding:10px;border:2px solid #C8B090;background:#FFFDF5;
+    font-family:'Microsoft YaHei',sans-serif;font-size:12px;line-height:1.8;color:#2A1808;
+    resize:none;outline:none;
+  }
+  #ai-editor textarea:focus{border-color:#E8B830}
+  #ai-editor-actions{
+    padding:8px 14px 12px;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;
+  }
+  #ai-editor-actions button{
+    padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;
+    font-family:'Microsoft YaHei',sans-serif;border:2px solid;transition:all 0.15s;
+  }
+  #ai-editor-cancel{background:#E8D5B0;border-color:#8B6B4A;color:#2A1808}
+  #ai-editor-cancel:hover{background:#C8B090}
+  #ai-editor-send{background:#E8B830;border-color:#E8B830;color:#2A1808}
+  #ai-editor-send:hover{background:#FFD84D}
 
   /* ═══ AI Writing Assistant Panel ═══ */
   #ai-suggest{
@@ -177,6 +220,21 @@
 <div id="scene">
   <canvas id="c"></canvas>
   <button id="back" onclick="history.back()">← 返回沙龙</button>
+  <!-- AI Card Editor (overlays left scene area) -->
+  <div id="ai-editor">
+    <div id="ai-editor-box">
+      <div id="ai-editor-hdr">
+        <div>✏️ 引用编辑</div>
+        <span onclick="closeEditor()">✕</span>
+      </div>
+      <div id="ai-editor-src"></div>
+      <textarea id="ai-editor-text"></textarea>
+      <div id="ai-editor-actions">
+        <button id="ai-editor-cancel" onclick="closeEditor()">取消</button>
+        <button id="ai-editor-send" onclick="sendFromEditor()">发送到讨论</button>
+      </div>
+    </div>
+  </div>
 </div>
 <div id="chat">
   <div id="chat-hdr">讨论中</div>
@@ -187,7 +245,7 @@
   <div id="ai-sidebar">
     <div id="ai-panel">
       <div id="ai-panel-hdr">
-        <div>💡 AI 素材参考</div>
+        <div>💡 AI 素材参考 · 点击卡片可引用编辑</div>
         <span id="ai-close" title="关闭">✕</span>
       </div>
       <div id="ai-materials"></div>
@@ -515,7 +573,7 @@ document.getElementById('ai-close').addEventListener('click',()=>{
 function showAIMaterials(){
   const container=document.getElementById('ai-materials');
   container.innerHTML='';
-  aiMaterials.forEach(m=>{
+  aiMaterials.forEach((m,idx)=>{
     const card=document.createElement('div');card.className='ai-card';
     let html=`<span class="ai-tag">${m.tag}</span>`;
     if(m.relevance)html+=`<span class="ai-relevance">相关度: ${m.relevance}</span>`;
@@ -529,10 +587,75 @@ function showAIMaterials(){
     if(m.quote)html+=`<div class="ai-quote">${m.quote}</div>`;
     if(m.data)html+=`<div><span class="ai-data">📊 ${m.data}</span></div>`;
     html+=`<div class="ai-src">📎 ${m.src}</div>`;
+    html+=`<div class="ai-use-btn" onclick="openEditor(${idx})">✏️ 引用编辑</div>`;
     card.innerHTML=html;
     container.appendChild(card);
   });
   document.getElementById('ai-sidebar').classList.add('show');
+}
+
+// ═══ Card Editor ═══
+function buildEditorDraft(m){
+  let draft='';
+  if(m.points&&m.points.length){
+    draft+=m.points.map((p,i)=>`${i+1}. ${p}`).join('\n');
+  }
+  if(m.data) draft+=`\n\n数据参考：${m.data}`;
+  if(m.quote) draft+=`\n\n${m.quote}`;
+  return draft.trim();
+}
+
+function openEditor(idx){
+  const m=aiMaterials[idx];
+  document.getElementById('ai-editor-src').textContent=`引用自: ${m.tag} · ${m.title}`;
+  document.getElementById('ai-editor-text').value=buildEditorDraft(m);
+  document.getElementById('ai-editor').classList.add('show');
+  setTimeout(()=>document.getElementById('ai-editor-text').focus(),100);
+}
+
+function closeEditor(){
+  document.getElementById('ai-editor').classList.remove('show');
+}
+
+function sendFromEditor(){
+  const text=document.getElementById('ai-editor-text').value.trim();
+  if(!text)return;
+  closeEditor();
+  document.getElementById('ai-sidebar').classList.remove('show');
+  addMsg('',text,true);msgCount++;
+  checkInsightCard();
+
+  // Collapse AI fallback if present
+  const fb=document.querySelector('.msg.ai-fallback');
+  if(fb&&!fb.classList.contains('collapsed')){
+    fb.classList.add('collapsed');
+    const tog=fb.querySelector('.fb-toggle');if(tog)tog.textContent='查看AI参考 ▼';
+  }
+  if(fallbackTimer){clearTimeout(fallbackTimer);fallbackTimer=null}
+
+  // Trigger NPC replies
+  const pool=[...charColors];
+  const replyCount=2+Math.floor(Math.random()*2);
+  const picked=[];
+  for(let i=0;i<replyCount&&pool.length>0;i++){
+    const ix=Math.floor(Math.random()*pool.length);
+    picked.push(pool.splice(ix,1)[0]);
+  }
+  let delay=1200+Math.random()*800;
+  picked.forEach((ch,i)=>{
+    const ri=charColors.findIndex(c=>c.name===ch.name);
+    const styleMap2={'阿哲':['引用数据来讨论这个问题——这个思路很严谨，我补充一点我们项目的经验。','这些数据确实能说明问题，跟我们观察到的趋势一致。','从数据来看方向是对的，关键是怎么落地到具体设计里。'],'小棠':['有数据支撑就靠谱多了。我们项目也可以拉类似的数据对比一下。','这个引用很到位，补充一下我们的实际情况也差不多。','用数据说话比感觉准，我觉得可以基于这个方向继续深挖。'],'青叶':['这些案例很有参考价值，尤其是数值部分跟我了解的情况吻合。','引用得好！不过不同品类可能差异比较大，不能直接套用。','从体验角度看，这些数据背后反映的玩家心理很值得分析。'],'言午':['有据可依，这个讨论质量上来了。我回头也把我们的数据整理一下。','这个引用帮我回忆起之前踩过的坑，确实是这样的。','数据面很全，实操层面我再补充几个注意点。'],'蓝山':['这个角度的数据我之前没注意到，涨知识了。','行业数据和我们内部的表现大体一致，但细节上有些差异值得讨论。','能把数据来源发一下吗？我想看看原始报告里还有没有其他有用的信息。']};
+    const pool3=styleMap2[ch.name]||['这个引用很有价值，值得深入讨论。'];
+    const reply=pool3[Math.floor(Math.random()*pool3.length)];
+    setTimeout(()=>{
+      if(i===0)typing.textContent=ch.name+' 正在输入…';
+      setTimeout(()=>{
+        typing.textContent='';addMsg(ch.name,reply);active=ri;msgCount++;checkInsightCard();
+        if(i<picked.length-1)setTimeout(()=>{typing.textContent=picked[i+1].name+' 正在输入…'},400);
+        else setTimeout(()=>{active=-1;maybeAIQuestion()},2000);
+      },800+Math.random()*600);
+    },delay*i);
+  });
 }
 
 // ═══════════════════════════════════════
