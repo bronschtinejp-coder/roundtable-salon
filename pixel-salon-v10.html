@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 知识沙龙</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#1a1220;font-family:'Microsoft YaHei','微软雅黑',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  #container{position:relative;width:100vw;height:100vh;max-width:2560px;max-height:1440px;aspect-ratio:16/9}
+  #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+</style>
+</head>
+<body><div id="container"><canvas id="c"></canvas></div>
+
+<script>
+const W=1280,H=720,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+function rz(){const ct=document.getElementById('container');const s=Math.min(ct.clientWidth/W,ct.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
+window.addEventListener('resize',rz);rz();
+function R(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(x|0,y|0,w|0,h|0)}
+function L(x1,y1,x2,y2,col,wid=1){ctx.strokeStyle=col;ctx.lineWidth=wid;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+
+// ═══════════════════════════════════════
+//  STARDEW VALLEY PALETTE
+// ═══════════════════════════════════════
+const P={
+  // Walls & structure
+  wall:'#5C4033',wallL:'#6B4E3D',wallD:'#4A3228',
+  wallpaper:'#8B6B4A',wpLight:'#A07850',wpDark:'#6B4E35',
+  beam:'#3E2812',beamL:'#5A3E1E',
+  trim:'#2E1A0C',trimL:'#4A2C16',
+  
+  // Floor
+  floor:'#8B6B4A',floorL:'#A07850',floorD:'#6B4E35',floorH:'#B8925E',
+  
+  // Wood furniture
+  wd:'#6B4226',wdL:'#8B5A36',wdD:'#3E2210',wdH:'#A0703C',
+  
+  // Fireplace
+  stone:'#6B6B6B',stoneL:'#8A8A8A',stoneD:'#4A4A4A',
+  fire1:'#FF6B2B',fire2:'#FFAA33',fire3:'#FFD84D',fireGlow:'rgba(255,140,40,',
+  ember:'#CC3300',ash:'#4A3A30',
+  
+  // Greenery
+  g1:'#2B5E3A',g2:'#3D8B4A',g3:'#5FB066',g4:'#8BC870',g5:'#A8D98A',
+  vine:'#3A7040',
+  
+  // Accents
+  gold:'#E8B830',goldL:'#FFD84D',goldD:'#B8901E',
+  red:'#C84040',redD:'#9B2828',redL:'#E86060',
+  blue:'#4A7BA8',blueL:'#6BA0CC',blueD:'#2E5C80',
+  purple:'#7B4A8B',purpleL:'#A06AB0',
+  
+  // Characters
+  skin1:'#FFCCAA',skin2:'#EEBB99',skin3:'#DDaa88',
+  
+  // Rug (deep warm persian)
+  rug:'#8B2020',rugB:'#6B1515',rugG:'#CC8833',rugC:'#AA4420',rugEdge:'#4A0E0E',
+  
+  // Ambient
+  warm:'rgba(255,200,100,',
+  shadow:'rgba(20,10,5,',
+  
+  // UI
+  paper:'#F5E6C8',ink:'#2D1B0E',
+  cork:'#B08050',corkBg:'#E8D5B0',
+  
+  // Sky/window
+  sky:'#3A5C8A',skyTop:'#1E3A5C',star:'#FFE8AA',moon:'#E8E0C0',
+};
+
+const topics=[
+  {title:'抽签玩法融合的成与败',tag:'Roguelike',icon:'🎲'},
+  {title:'社交系统设计的得与失',tag:'社交',icon:'💬'},
+  {title:'AI如何重塑关卡设计',tag:'AI+游戏',icon:'🤖'},
+  {title:'叙事与机制的边界',tag:'叙事',icon:'📖'},
+  {title:'商业化体验平衡',tag:'商业化',icon:'💰'},
+  {title:'开放世界内容密度',tag:'关卡',icon:'🗺️'},
+];
+
+// ═══════════════════════════════════════
+//  ANIMATED PARTICLES
+// ═══════════════════════════════════════
+const dustMotes=[];
+for(let i=0;i<25;i++)dustMotes.push({x:Math.random()*W,y:Math.random()*H*0.6+100,vx:(Math.random()-0.5)*0.3,vy:-0.1-Math.random()*0.2,s:1+Math.random()*2,a:Math.random()});
+const fireParticles=[];
+for(let i=0;i<12;i++)fireParticles.push({x:0,y:0,vy:-1-Math.random()*2,life:Math.random(),maxLife:0.8+Math.random()*0.4});
+
+// ═══════════════════════════════════════
+//  ROOM - Stardew Saloon Interior
+// ═══════════════════════════════════════
+function drawRoom(f){
+  // Dark wood wall with wainscoting
+  // Upper wall - dark paneled wood
+  R(0,0,W,260,P.wall);
+  // Wood grain detail
+  for(let y=20;y<260;y+=40){
+    R(0,y,W,2,P.wallD);
+    R(0,y+20,W,1,P.wallL);
+  }
+  // Vertical panels
+  for(let x=0;x<W;x+=160){
+    R(x,0,3,260,P.wallD);
+    R(x+80,10,2,240,P.wallL+'44');
+  }
+  
+  // Decorative wallpaper band at top
+  R(0,0,W,30,P.wallD);
+  for(let x=0;x<W;x+=32){
+    R(x+8,8,16,14,P.wallL+'44');
+  }
+  
+  // Horizontal beam / trim
+  R(0,248,W,16,P.beam);
+  R(0,248,W,4,P.beamL);
+  R(0,260,W,4,P.trim);
+  
+  // Wainscoting - lower wall panels
+  R(0,264,W,40,P.wpDark);
+  for(let x=0;x<W;x+=80){
+    R(x+4,268,72,32,P.wallpaper);
+    R(x+8,272,64,24,P.wpLight);
+    R(x+8,272,64,3,P.wallpaper+'88');
+  }
+  R(0,300,W,6,P.trim);
+  
+  // Floor - warm wood planks
+  R(0,306,W,H-306,P.floor);
+  for(let y=306;y<H;y+=24){
+    const off=(Math.floor((y-306)/24)%2)*60;
+    for(let x=off;x<W;x+=120){
+      R(x,y,120,24,((x+y)%240<120)?P.floorL:P.floor);
+      R(x,y,120,2,P.floorH+'55');
+      R(x,y+22,120,2,P.floorD);
+      // Board separation
+      R(x,y,2,24,P.floorD+'88');
+    }
+  }
+  // Floor wear
+  R(350,550,200,8,P.floorD+'22');
+  R(600,580,180,6,P.floorD+'22');
+  
+  // Large Persian rug (Stardew style - richer pattern)
+  const rx=260,ry=360,rw=620,rh=300;
+  R(rx,ry,rw,rh,P.rugEdge);
+  R(rx+6,ry+6,rw-12,rh-12,P.rug);
+  R(rx+14,ry+14,rw-28,rh-28,P.rugC);
+  R(rx+22,ry+22,rw-44,rh-44,P.rugG);
+  R(rx+30,ry+30,rw-60,rh-60,P.rugC);
+  R(rx+38,ry+38,rw-76,rh-76,P.rug);
+  // Rug corner ornaments
+  for(let i=0;i<4;i++){
+    const cx2=rx+(i%2===0?40:rw-48),cy2=ry+(i<2?40:rh-48);
+    R(cx2,cy2,12,12,P.goldD);
+  }
+  // Rug center diamond
+  const mid=rx+rw/2,midy=ry+rh/2;
+  ctx.fillStyle=P.goldD;ctx.beginPath();
+  ctx.moveTo(mid,midy-40);ctx.lineTo(mid+60,midy);ctx.lineTo(mid,midy+40);ctx.lineTo(mid-60,midy);ctx.fill();
+  ctx.fillStyle=P.rug;ctx.beginPath();
+  ctx.moveTo(mid,midy-28);ctx.lineTo(mid+44,midy);ctx.lineTo(mid,midy+28);ctx.lineTo(mid-44,midy);ctx.fill();
+  // Fringe
+  for(let fx=rx+10;fx<rx+rw-10;fx+=12){
+    R(fx,ry-4,4,6,P.rugG);R(fx+2,ry-6,2,3,P.rugC);
+    R(fx,ry+rh-2,4,6,P.rugG);R(fx+2,ry+rh+2,2,3,P.rugC);
+  }
+}
+
+// ═══════════════════════════════════════
+//  FIREPLACE - Star feature, left wall
+// ═══════════════════════════════════════
+function drawFireplace(f){
+  const fx=40,fy=100,fw=180,fh=210;
+  // Stone surround
+  R(fx,fy,fw,fh,P.stoneD);
+  // Stone blocks pattern
+  for(let sy=fy;sy<fy+fh;sy+=20){
+    const off=(Math.floor((sy-fy)/20)%2)*30;
+    for(let sx=fx+off;sx<fx+fw;sx+=60){
+      R(sx+1,sy+1,58,18,P.stone);
+      R(sx+2,sy+2,56,4,P.stoneL+'66');
+    }
+  }
+  // Mantle
+  R(fx-12,fy-14,fw+24,20,P.wdD);
+  R(fx-10,fy-12,fw+20,16,P.wd);
+  R(fx-10,fy-12,fw+20,4,P.wdH);
+  // Firebox opening
+  const bx=fx+30,by=fy+60,bw=120,bh=fh-70;
+  R(bx,by,bw,bh,'#1A0A05');
+  R(bx+4,by,bw-8,4,P.stoneD);
+  // Arch top
+  ctx.fillStyle=P.stone;ctx.beginPath();
+  ctx.moveTo(bx,by+20);ctx.quadraticCurveTo(bx+bw/2,by-15,bx+bw,by+20);
+  ctx.lineTo(bx+bw,by);ctx.lineTo(bx,by);ctx.fill();
+  
+  // Fire animation
+  const fireBase=by+bh-20;
+  const t=f*0.08;
+  // Embers/logs
+  R(bx+20,fireBase+4,80,12,P.ash);
+  R(bx+25,fireBase-2,30,10,'#5C2200');
+  R(bx+60,fireBase,35,8,'#4A1A00');
+  R(bx+30,fireBase-6,20,8,'#6B3300');
+  
+  // Fire tongues
+  for(let i=0;i<5;i++){
+    const px=bx+25+i*18,ph=25+Math.sin(t+i*1.7)*12+Math.cos(t*1.3+i)*8;
+    const pw=12+Math.sin(t*0.8+i*2)*4;
+    ctx.fillStyle=i%2===0?P.fire1:P.fire2;
+    ctx.beginPath();
+    ctx.moveTo(px,fireBase);
+    ctx.quadraticCurveTo(px-pw/2,fireBase-ph*0.6,px+pw*0.3,fireBase-ph);
+    ctx.quadraticCurveTo(px+pw,fireBase-ph*0.4,px+pw,fireBase);
+    ctx.fill();
+  }
+  // Bright core
+  for(let i=0;i<3;i++){
+    const px=bx+35+i*22,ph=15+Math.sin(t*1.4+i*2.1)*8;
+    ctx.fillStyle=P.fire3;
+    ctx.beginPath();
+    ctx.moveTo(px,fireBase-2);
+    ctx.quadraticCurveTo(px,fireBase-ph,px+8,fireBase-ph+4);
+    ctx.quadraticCurveTo(px+10,fireBase-4,px+10,fireBase-2);
+    ctx.fill();
+  }
+  
+  // Fire glow on surroundings
+  const glowA=0.06+Math.sin(t*1.2)*0.02;
+  ctx.fillStyle=P.fireGlow+glowA+')';
+  ctx.beginPath();ctx.arc(fx+fw/2,fy+fh-30,180,0,Math.PI*2);ctx.fill();
+  
+  // Chimney / mantle decorations
+  R(fx+10,fy-10,24,8,P.gold); // candle holder
+  R(fx+16,fy-20,12,12,P.fire3+'88'); // candle flame
+  R(fx+fw-34,fy-10,24,8,P.gold);
+  R(fx+fw-28,fy-20,12,12,P.fire3+'88');
+  
+  // Small clock on mantle
+  R(fx+fw/2-14,fy-30,28,24,P.wdD);
+  R(fx+fw/2-10,fy-26,20,16,P.paper);
+  R(fx+fw/2,fy-22,2,6,P.ink);
+  R(fx+fw/2-3,fy-18,6,2,P.ink);
+}
+
+// ═══════════════════════════════════════
+//  WINDOWS - Night scene with stars
+// ═══════════════════════════════════════
+function drawWindow(x,y,w,h,f){
+  // Window frame
+  R(x-8,y-8,w+16,h+16,P.wdD);
+  R(x-4,y-4,w+8,h+8,P.wd);
+  R(x,y,w,h,P.skyTop);
+  // Night sky gradient
+  R(x,y,w,h/3,P.skyTop);
+  R(x,y+h/3,w,h/3,P.sky);
+  R(x,y+2*h/3,w,h/3,'#2A4A6A');
+  // Stars
+  const starSeed=x*7+y*13;
+  for(let i=0;i<8;i++){
+    const sx2=x+8+(((starSeed+i*37)%97)/97)*(w-16);
+    const sy2=y+4+(((starSeed+i*53)%89)/89)*(h/2);
+    const twinkle=Math.sin(f*0.05+i*1.3)>0.3?2:1;
+    R(sx2,sy2,twinkle,twinkle,P.star);
+  }
+  // Moon (small)
+  if(x<400){
+    ctx.fillStyle=P.moon;ctx.beginPath();ctx.arc(x+w-20,y+18,8,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=P.skyTop;ctx.beginPath();ctx.arc(x+w-16,y+16,6,0,Math.PI*2);ctx.fill();
+  }
+  // Distant hills
+  R(x,y+h-20,w,20,'#1A3328');
+  R(x+10,y+h-28,30,12,'#1A3328');
+  R(x+w-40,y+h-24,40,24,'#1A3328');
+  // Trees silhouette
+  for(let i=0;i<3;i++){
+    const tx=x+15+i*(w/3);
+    R(tx,y+h-36-i*4,8,20+i*4,'#0D2218');
+    R(tx-3,y+h-38-i*4,14,8,'#0D2218');
+  }
+  // Window cross frame
+  R(x+w/2-2,y,4,h,P.wdL);
+  R(x,y+h/2-2,w,4,P.wdL);
+  // Warm light reflection on glass edges
+  R(x,y,w,2,P.warm+'0.1)');
+  R(x,y,2,h,P.warm+'0.08)');
+  // Curtains
+  R(x-4,y-4,14,h+8,'#8B3030');
+  R(x+w-10,y-4,14,h+8,'#8B3030');
+  R(x-4,y-4,14,4,'#6B2020');
+  R(x+w-10,y-4,14,4,'#6B2020');
+  // Curtain folds
+  R(x-2,y+10,3,h-14,'#6B2020');
+  R(x+6,y+10,2,h-14,'#A04040');
+  R(x+w-8,y+10,3,h-14,'#6B2020');
+  R(x+w-2,y+10,2,h-14,'#A04040');
+}
+
+// ═══════════════════════════════════════
+//  TITLE SIGN - Carved wood tavern sign
+// ═══════════════════════════════════════
+function drawTitleSign(){
+  const sx=440,sy=32,sw=400,sh=108;
+  // Chains
+  R(sx+30,0,4,sy+4,P.goldD);R(sx+34,0,2,sy+4,P.gold);
+  R(sx+sw-34,0,4,sy+4,P.goldD);R(sx+sw-30,0,2,sy+4,P.gold);
+  // Sign board with ornate frame
+  R(sx+4,sy+4,sw,sh,P.shadow+'0.4)');
+  R(sx,sy,sw,sh,P.wdD);
+  R(sx+4,sy+4,sw-8,sh-8,P.wd);
+  R(sx+8,sy+8,sw-16,sh-16,P.wdL);
+  // Inner carved area
+  R(sx+16,sy+14,sw-32,sh-28,P.wdD);
+  R(sx+18,sy+16,sw-36,sh-32,'#2A1808');
+  // Gold trim
+  R(sx+14,sy+12,sw-28,2,P.gold);
+  R(sx+14,sy+sh-14,sw-28,2,P.gold);
+  R(sx+14,sy+12,2,sh-24,P.gold);
+  R(sx+sw-16,sy+12,2,sh-24,P.gold);
+  // Corner ornaments
+  for(let i=0;i<4;i++){
+    const cx2=sx+(i%2===0?14:sw-18),cy2=sy+(i<2?12:sh-16);
+    R(cx2-1,cy2-1,6,6,P.goldL);
+  }
+  // Text
+  ctx.fillStyle=P.goldL;ctx.font='bold 36px "Microsoft YaHei"';ctx.textAlign='center';
+  ctx.fillText('回 响 圆 桌',sx+sw/2,sy+56);
+  ctx.fillStyle=P.gold+'BB';ctx.font='14px "Microsoft YaHei"';
+  ctx.fillText('— 知 识 沙 龙 —',sx+sw/2,sy+82);
+  ctx.textAlign='start';
+}
+
+// ═══════════════════════════════════════
+//  HOT TOPICS BOARD - Cork board on wall
+// ═══════════════════════════════════════
+function drawBoard(){
+  const bx=940,by=50,bw=310,bh=240;
+  // Frame
+  R(bx-6,by-6,bw+12,bh+12,P.wdD);
+  R(bx-3,by-3,bw+6,bh+6,P.wd);
+  R(bx,by,bw,bh,P.cork);
+  R(bx+4,by+4,bw-8,bh-8,P.corkBg);
+  // Cork texture
+  for(let i=0;i<20;i++){
+    const dx=bx+8+((i*37)%((bw-16)|1)),dy=by+8+((i*53)%(bh-16));
+    R(dx,dy,3,2,P.cork+'88');
+  }
+  // Header
+  ctx.fillStyle=P.ink;ctx.font='bold 16px "Microsoft YaHei"';
+  ctx.fillText('🔥 本周热议',bx+14,by+32);
+  R(bx+10,by+40,bw-20,2,P.cork);
+  
+  // Topic cards (pinned notes style)
+  topics.forEach((t,i)=>{
+    const cy2=by+52+i*30;
+    // Pin
+    ctx.fillStyle=i%2===0?P.red:P.blue;
+    ctx.beginPath();ctx.arc(bx+18,cy2+10,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#FFF';ctx.beginPath();ctx.arc(bx+18,cy2+9,1.5,0,Math.PI*2);ctx.fill();
+    // Text
+    const txt=t.title.length>10?t.title.slice(0,10)+'…':t.title;
+    ctx.fillStyle=P.ink;ctx.font='bold 13px "Microsoft YaHei"';
+    ctx.fillText(txt,bx+30,cy2+14);
+    // Tag
+    R(bx+30,cy2+17,36,12,P.gold+'33');
+    ctx.fillStyle=P.goldD;ctx.font='10px "Microsoft YaHei"';
+    ctx.fillText('#'+t.tag,bx+32,cy2+27);
+  });
+}
+
+// ═══════════════════════════════════════
+//  FURNITURE - Stardew style
+// ═══════════════════════════════════════
+function drawSofa(x,y){
+  const sw=170,sh=60;
+  // Shadow
+  R(x-sw/2+6,y+sh-12,sw-12,8,P.shadow+'0.15)');
+  // Back
+  R(x-sw/2,y-sh+10,sw,sh-10,P.wdD);
+  R(x-sw/2+4,y-sh+14,sw-8,sh-18,P.redD);
+  R(x-sw/2+8,y-sh+18,sw-16,sh-26,'#7B3030');
+  // Button tufting
+  for(let i=0;i<3;i++){
+    R(x-sw/2+30+i*40,y-sh+28,4,4,P.redD);
+  }
+  // Seat cushion
+  R(x-sw/2+4,y,sw-8,26,P.red);
+  R(x-sw/2+8,y+2,sw-16,20,'#AA3838');
+  R(x-sw/2+8,y+2,sw-16,4,'#CC5050');
+  // Seat divisions
+  R(x-sw/6,y+2,3,20,P.redD);
+  R(x+sw/6-3,y+2,3,20,P.redD);
+  // Arms
+  R(x-sw/2-6,y-10,16,40,P.wdD);
+  R(x-sw/2-4,y-8,12,36,P.wd);
+  R(x-sw/2-4,y-8,12,4,P.wdH);
+  R(x+sw/2-10,y-10,16,40,P.wdD);
+  R(x+sw/2-8,y-8,12,36,P.wd);
+  R(x+sw/2-8,y-8,12,4,P.wdH);
+  // Legs
+  R(x-sw/2+4,y+26,8,14,P.wdD);
+  R(x+sw/2-12,y+26,8,14,P.wdD);
+  // Throw pillows
+  R(x-sw/2+14,y-12,20,18,P.gold);
+  R(x-sw/2+16,y-10,16,14,P.goldL);
+  R(x+sw/2-34,y-14,22,20,P.blueD);
+  R(x+sw/2-32,y-12,18,16,P.blue);
+}
+
+function drawArmchair(x,y,color){
+  const aw=56,ah=50;
+  const col=color||P.redD;
+  const colL=color==='#2E5C80'?'#4A7BA8':color==='#5C3060'?'#7B4A8B':'#AA3838';
+  // Shadow
+  R(x-aw/2+4,y+ah-18,aw-8,6,P.shadow+'0.12)');
+  // Back
+  R(x-aw/2,y-ah,aw,ah-10,P.wdD);
+  R(x-aw/2+4,y-ah+4,aw-8,ah-18,col);
+  R(x-aw/2+6,y-ah+6,aw-12,ah-22,colL);
+  // Seat
+  R(x-aw/2+4,y-10,aw-8,20,col);
+  R(x-aw/2+6,y-8,aw-12,16,colL);
+  R(x-aw/2+6,y-8,aw-12,3,col+'CC');
+  // Arms
+  R(x-aw/2-4,y-14,12,28,P.wdD);
+  R(x-aw/2-2,y-12,8,24,P.wd);
+  R(x+aw/2-8,y-14,12,28,P.wdD);
+  R(x+aw/2-6,y-12,8,24,P.wd);
+  // Legs
+  R(x-aw/2+2,y+10,6,12,P.wdD);
+  R(x+aw/2-8,y+10,6,12,P.wdD);
+}
+
+function drawCoffeeTable(x,y){
+  const tw=100,th=16;
+  // Shadow
+  ctx.fillStyle=P.shadow+'0.12)';ctx.beginPath();ctx.ellipse(x,y+20,tw/2+4,8,0,0,Math.PI*2);ctx.fill();
+  // Legs
+  R(x-tw/2+8,y+th,6,20,P.wdD);
+  R(x+tw/2-14,y+th,6,20,P.wdD);
+  // Table top
+  R(x-tw/2,y,tw,th,P.wdD);
+  R(x-tw/2+2,y+2,tw-4,th-4,P.wd);
+  R(x-tw/2+2,y+2,tw-4,3,P.wdH);
+  // Items on table
+  // Tea cup
+  R(x-20,y-6,10,6,'#FFF');R(x-18,y-8,6,3,P.paper);
+  R(x-14,y-4,4,4,'#FFF');// handle
+  // Book
+  R(x+6,y-8,18,12,P.redD);R(x+8,y-6,14,8,P.paper);
+  // Small plant
+  R(x-38,y-10,12,10,P.wdL);R(x-36,y-16,4,8,P.g2);R(x-34,y-18,6,6,P.g3);R(x-30,y-14,4,6,P.g4);
+}
+
+// ═══════════════════════════════════════
+//  DECORATIONS - Stardew style details
+// ═══════════════════════════════════════
+function drawBookshelf(x,y){
+  const w=60,h=180;
+  R(x,y,w,h,P.wdD);
+  R(x+4,y+4,w-8,h-8,P.wd);
+  // Shelves
+  for(let sy=y+14;sy<y+h-20;sy+=42){
+    R(x+4,sy,w-8,5,P.wdD);
+    R(x+4,sy,w-8,2,P.wdH);
+    // Books
+    const bkColors=['#C84040','#264653','#2B5E3A','#E8B830','#8B5E3C','#4A7BA8','#7B4A8B','#CC6B33'];
+    let bx2=x+8;
+    while(bx2<x+w-12){
+      const bw=5+((bx2*7+sy)%4);
+      const bh=14+((bx2*11+sy)%12);
+      const col=bkColors[(bx2+sy)%bkColors.length|0];
+      R(bx2,sy+42-bh,bw,bh,col);
+      R(bx2,sy+40-bh,bw,2,col+'88');
+      bx2+=bw+2;
+    }
+  }
+}
+
+function drawHangingLantern(x,y,f){
+  // Chain
+  R(x+6,y-30,2,30,P.goldD);
+  // Lantern body
+  R(x,y,14,20,P.wdD);
+  R(x+2,y+2,10,16,'#2A1500');
+  // Glow
+  const ga=0.4+Math.sin(f*0.06)*0.1;
+  ctx.fillStyle=P.warm+ga+')';
+  ctx.beginPath();ctx.arc(x+7,y+10,6,0,Math.PI*2);ctx.fill();
+  // Outer glow
+  ctx.fillStyle=P.warm+(ga*0.15)+')';
+  ctx.beginPath();ctx.arc(x+7,y+10,30,0,Math.PI*2);ctx.fill();
+  // Cap
+  R(x-2,y-4,18,6,P.goldD);
+  R(x,y-2,14,2,P.gold);
+}
+
+function drawPlant(x,y,size){
+  const s=size||1;
+  // Pot
+  R(x,y+20*s,24*s,18*s,'#A05020');
+  R(x+2*s,y+16*s,20*s,6*s,'#8B4018');
+  R(x-2*s,y+36*s,28*s,4*s,'#7B3515');
+  // Soil
+  R(x+4*s,y+16*s,16*s,4*s,'#3A2A1A');
+  // Leaves (Stardew style bushy)
+  const leaves=[[-4,-10],[4,-18],[12,-14],[0,-24],[8,-28],[16,-8],[-2,-4],[18,-20]];
+  leaves.forEach(([lx,ly])=>{
+    const col=[P.g1,P.g2,P.g3,P.g4][Math.abs(lx+ly)%4];
+    R(x+lx*s+6*s,y+ly*s+14*s,8*s,6*s,col);
+  });
+}
+
+function drawWallDecor(x,y){
+  // Framed painting
+  R(x,y,56,44,P.wdD);
+  R(x+3,y+3,50,38,P.wd);
+  R(x+6,y+6,44,32,P.sky);
+  // Simple landscape in frame
+  R(x+6,y+24,44,14,'#3A7040');
+  R(x+10,y+18,12,14,'#2B5E3A');
+  R(x+30,y+20,10,12,'#2B5E3A');
+  // Sun
+  R(x+38,y+10,8,8,P.goldL);
+}
+
+function drawBarrelStack(x,y){
+  // Bottom barrel
+  R(x,y+16,36,28,P.wdD);
+  R(x+2,y+18,32,24,P.wdL);
+  R(x+4,y+26,28,4,P.wdH);
+  R(x+16,y+18,4,24,P.wdD);
+  // Top barrel
+  R(x+6,y,28,20,P.wdD);
+  R(x+8,y+2,24,16,P.wdL);
+  R(x+10,y+8,20,3,P.wdH);
+  R(x+18,y+2,4,16,P.wdD);
+}
+
+function drawCandleWall(x,y,f){
+  // Sconce
+  R(x,y,12,8,P.goldD);
+  R(x+2,y-2,8,4,P.gold);
+  // Candle
+  R(x+4,y-12,4,12,P.paper);
+  // Flame
+  const fh=4+Math.sin(f*0.1+x)*1.5;
+  ctx.fillStyle=P.fire2;
+  ctx.beginPath();ctx.moveTo(x+4,y-12);ctx.quadraticCurveTo(x+6,y-12-fh,x+8,y-12);ctx.fill();
+  ctx.fillStyle=P.fire3;
+  ctx.beginPath();ctx.moveTo(x+5,y-12);ctx.quadraticCurveTo(x+6,y-12-fh*0.6,x+7,y-12);ctx.fill();
+  // Glow
+  ctx.fillStyle=P.warm+'0.06)';ctx.beginPath();ctx.arc(x+6,y-8,20,0,Math.PI*2);ctx.fill();
+}
+
+// ═══════════════════════════════════════
+//  CHARACTERS - Stardew Valley Style
+// ═══════════════════════════════════════
+// Stardew characters: larger head, shorter body, distinct outfits, more detail
+
+const charDefs=[
+  {name:'白露',sx:'#FFCCAA',hr:'#1C1C1C',hr2:'#2A2A2A',hrStyle:'long',
+   top:'#E8D5C0',t2:'#D4C0AA',bot:'#4A4A6E',acc:'#C84040',
+   x:490,y:400,pose:'sit',dir:1,topic:5},
+  {name:'青叶',sx:'#F5D6B8',hr:'#1A1A2E',hr2:'#2E2E4A',hrStyle:'short',
+   top:'#2B5E3A',t2:'#1B4332',bot:'#3A3A5A',acc:'#E8B830',
+   x:640,y:400,pose:'sit',dir:1,topic:2},
+  {name:'阿哲',sx:'#F4C9A8',hr:'#2D1B0E',hr2:'#4A2C18',hrStyle:'spiky',
+   top:'#264653',t2:'#1D353F',bot:'#3D3D5C',acc:'#4A7BA8',
+   x:340,y:480,pose:'sit',dir:1,topic:0},
+  {name:'小棠',sx:'#FDE0C8',hr:'#5C2E0A',hr2:'#7A3E18',hrStyle:'bob',
+   top:'#C84040',t2:'#9B2828',bot:'#4A4A6A',acc:'#FFD84D',
+   x:800,y:560,pose:'walk',dir:-1,topic:1,
+   path:[{x:800,y:560},{x:700,y:540},{x:580,y:560},{x:460,y:550},{x:350,y:570},{x:260,y:590},{x:350,y:570},{x:460,y:550},{x:580,y:560},{x:700,y:540}],
+   pathIdx:0,pathT:0,pauseTimer:0},
+  {name:'蓝山',sx:'#F8D8C0',hr:'#2C1810',hr2:'#4A3020',hrStyle:'neat',
+   top:'#4A7BA8',t2:'#2E5C80',bot:'#3A3A5A',acc:'#E8B830',
+   x:950,y:520,pose:'walk',dir:1,topic:4,
+   path:[{x:950,y:520},{x:1050,y:540},{x:1100,y:560},{x:1050,y:580},{x:950,y:600},{x:850,y:610},{x:750,y:600},{x:850,y:580},{x:950,y:560}],
+   pathIdx:0,pathT:0,pauseTimer:0},
+  {name:'言午',sx:'#EEBB99',hr:'#4A3520',hr2:'#6B4E30',hrStyle:'tied',
+   top:'#E8B830',t2:'#B8901E',bot:'#3D3A4A',acc:'#C84040',
+   x:170,y:490,pose:'stand',dir:1,topic:3},
+];
+
+// Walking path animation system
+function updateWalkers(f){
+  chars.forEach(ch=>{
+    if(ch.pose!=='walk'||!ch.path)return;
+    // Pause at waypoints
+    if(ch.pauseTimer>0){ch.pauseTimer--;return}
+    ch.pathT+=0.008;
+    if(ch.pathT>=1){
+      ch.pathT=0;
+      ch.pathIdx=(ch.pathIdx+1)%ch.path.length;
+      // Random pause at waypoints (stand and look around)
+      if(Math.random()<0.3)ch.pauseTimer=60+Math.floor(Math.random()*90);
+    }
+    const curr=ch.path[ch.pathIdx];
+    const next=ch.path[(ch.pathIdx+1)%ch.path.length];
+    ch.x=curr.x+(next.x-curr.x)*ch.pathT;
+    ch.y=curr.y+(next.y-curr.y)*ch.pathT;
+    ch.dir=(next.x-curr.x)>=0?1:-1;
+  });
+}
+
+function drawChar(ch,hv,f){
+  const s=4.6,cx=ch.x;
+  // Walking bob animation
+  const walkBob=ch.pose==='walk'?Math.abs(Math.sin(f*0.12))*3:0;
+  const cy=ch.y-(ch.pose==='sit'?8:0)-walkBob;
+  const ox=cx-6*s,oy=cy-24*s;
+  ctx.save();
+  
+  // Shadow
+  ctx.fillStyle=P.shadow+'0.1)';ctx.beginPath();ctx.ellipse(cx,cy+4,14,4,0,0,Math.PI*2);ctx.fill();
+  
+  // === LEGS ===
+  if(ch.pose==='walk'){
+    // Walking leg animation - alternating step
+    const step=Math.sin(f*0.12)*3;
+    const step2=Math.cos(f*0.12)*3;
+    R(ox+3*s,oy+18*s+step,3*s,7*s-step*0.3,ch.bot);
+    R(ox+8*s,oy+18*s+step2,3*s,7*s-step2*0.3,ch.bot);
+    R(ox+2.5*s,oy+24.5*s+step,4*s,2*s,'#2A1A0E');
+    R(ox+7.5*s,oy+24.5*s+step2,4*s,2*s,'#2A1A0E');
+  } else if(ch.pose==='stand'){
+    R(ox+3*s,oy+18*s,3*s,7*s,ch.bot);
+    R(ox+8*s,oy+18*s,3*s,7*s,ch.bot);
+    // Shoes
+    R(ox+2.5*s,oy+24.5*s,4*s,2*s,'#2A1A0E');
+    R(ox+7.5*s,oy+24.5*s,4*s,2*s,'#2A1A0E');
+  } else {
+    // Sitting legs - bent forward
+    R(ox+2*s,oy+17*s,4*s,4*s,ch.bot);
+    R(ox+8*s,oy+17*s,4*s,4*s,ch.bot);
+    R(ox+2*s,oy+20*s,3*s,5*s,ch.bot);
+    R(ox+9*s,oy+20*s,3*s,5*s,ch.bot);
+    R(ox+1.5*s,oy+24*s,4*s,2*s,'#2A1A0E');
+    R(ox+8.5*s,oy+24*s,4*s,2*s,'#2A1A0E');
+  }
+  
+  // === BODY ===
+  R(ox+2*s,oy+10*s,10*s,9*s,ch.top);
+  R(ox+2*s,oy+16*s,10*s,2*s,ch.t2);
+  // Shirt detail - collar
+  R(ox+5*s,oy+10*s,4*s,2*s,ch.sx);
+  // Belt/waist
+  R(ox+2.5*s,oy+17.5*s,9*s,1.5*s,ch.acc);
+  
+  // === ARMS ===
+  if(ch.pose==='walk'){
+    // Arm swing while walking
+    const armSwing=Math.sin(f*0.12)*2.5;
+    R(ox+0.5*s,oy+10*s,2.5*s,7*s+armSwing,ch.top);
+    R(ox+11*s,oy+10*s,2.5*s,7*s-armSwing,ch.top);
+    R(ox+0.5*s,oy+16.5*s+armSwing,2.5*s,2*s,ch.sx);
+    R(ox+11*s,oy+16.5*s-armSwing,2.5*s,2*s,ch.sx);
+  } else if(ch.pose==='stand'){
+    R(ox+0.5*s,oy+10*s,2.5*s,8*s,ch.top);
+    R(ox+11*s,oy+10*s,2.5*s,8*s,ch.top);
+    // Hands
+    R(ox+0.5*s,oy+17.5*s,2.5*s,2*s,ch.sx);
+    R(ox+11*s,oy+17.5*s,2.5*s,2*s,ch.sx);
+  } else {
+    R(ox+0.5*s,oy+10*s,2.5*s,6*s,ch.top);
+    R(ox+11*s,oy+11*s,2.5*s,5*s,ch.top);
+    R(ox+0.5*s,oy+15.5*s,2.5*s,2*s,ch.sx);
+    R(ox+11*s,oy+15.5*s,2.5*s,2*s,ch.sx);
+  }
+  
+  // === HEAD ===
+  // Hair back layer
+  R(ox+1*s,oy,12*s,6*s,ch.hr);
+  
+  // Face
+  R(ox+2.5*s,oy+2*s,9*s,7*s,ch.sx);
+  // Face highlight
+  R(ox+3*s,oy+2.5*s,4*s,2*s,ch.sx+'DD');
+  
+  // Hair style
+  if(ch.hrStyle==='long'){
+    R(ox+0.5*s,oy-1*s,13*s,4*s,ch.hr2);
+    R(ox+0.5*s,oy+2*s,2.5*s,7*s,ch.hr);
+    R(ox+11*s,oy+2*s,2.5*s,7*s,ch.hr);
+  }else if(ch.hrStyle==='short'){
+    R(ox+1*s,oy-1*s,12*s,4*s,ch.hr2);
+    R(ox+1*s,oy+2*s,2*s,3*s,ch.hr);
+  }else if(ch.hrStyle==='spiky'){
+    R(ox+1*s,oy-2*s,12*s,4*s,ch.hr2);
+    R(ox+3*s,oy-3*s,3*s,3*s,ch.hr);
+    R(ox+7*s,oy-3.5*s,3*s,3*s,ch.hr);
+    R(ox+10*s,oy-2*s,2*s,2*s,ch.hr);
+  }else if(ch.hrStyle==='bob'){
+    R(ox+0.5*s,oy-1*s,13*s,5*s,ch.hr2);
+    R(ox+0.5*s,oy+3*s,3*s,5*s,ch.hr);
+    R(ox+10.5*s,oy+3*s,3*s,5*s,ch.hr);
+    R(ox+4*s,oy-1*s,6*s,2*s,ch.hr2);// bangs
+  }else if(ch.hrStyle==='neat'){
+    R(ox+1*s,oy-1*s,12*s,4*s,ch.hr2);
+    R(ox+2*s,oy+1*s,2*s,2*s,ch.hr);
+    R(ox+10*s,oy+1*s,2*s,2*s,ch.hr);
+  }else if(ch.hrStyle==='tied'){
+    R(ox+1*s,oy-1*s,12*s,4*s,ch.hr2);
+    R(ox+11*s,oy+2*s,3*s,8*s,ch.hr);// ponytail
+    R(ox+12*s,oy+4*s,2*s,2*s,ch.acc);// hair tie
+  }
+  
+  // Eyes (Stardew style - larger, expressive)
+  const eyeOff=ch.dir>=0?0:1*s;
+  R(ox+4*s+eyeOff,oy+4*s,2.5*s,2.5*s,'#FFFFFF');
+  R(ox+8*s+eyeOff,oy+4*s,2.5*s,2.5*s,'#FFFFFF');
+  R(ox+4.5*s+eyeOff,oy+4.5*s,1.5*s,1.5*s,'#1A1A2E');
+  R(ox+8.5*s+eyeOff,oy+4.5*s,1.5*s,1.5*s,'#1A1A2E');
+  // Eye shine
+  R(ox+5*s+eyeOff,oy+4*s,1*s,1*s,'#FFFFFF');
+  R(ox+9*s+eyeOff,oy+4*s,1*s,1*s,'#FFFFFF');
+  
+  // Blush (Stardew style rosy cheeks)
+  R(ox+3*s,oy+6*s,2*s,1*s,'rgba(220,120,120,0.35)');
+  R(ox+9*s,oy+6*s,2*s,1*s,'rgba(220,120,120,0.35)');
+  
+  // Mouth
+  R(ox+6*s,oy+7*s,2*s,1*s,'#8B5555');
+  
+  // Blink
+  if(Math.floor(f/180)%4===0&&f%180<4){
+    R(ox+4*s+eyeOff,oy+4.5*s,2.5*s,1.5*s,ch.sx);
+    R(ox+8*s+eyeOff,oy+4.5*s,2.5*s,1.5*s,ch.sx);
+    R(ox+4*s+eyeOff,oy+5*s,2.5*s,1*s,'#2A1A0E');
+    R(ox+8*s+eyeOff,oy+5*s,2.5*s,1*s,'#2A1A0E');
+  }
+  
+  // Hover effect - warm glow
+  if(hv){
+    ctx.strokeStyle=P.gold;ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(ox-4,oy-6,16*s,28*s,4);ctx.stroke();
+    // Glow
+    ctx.fillStyle=P.warm+'0.05)';
+    ctx.beginPath();ctx.roundRect(ox-4,oy-6,16*s,28*s,4);ctx.fill();
+    // Label
+    ctx.fillStyle=P.paper;ctx.font='bold 13px "Microsoft YaHei"';ctx.textAlign='center';
+    R(cx-40,oy-22,80,18,P.wdD+'EE');
+    ctx.fillText('点击加入讨论',cx,oy-8);
+    ctx.textAlign='start';
+  }
+  
+  // Name tag
+  ctx.fillStyle=P.paper;ctx.font='bold 11px "Microsoft YaHei"';ctx.textAlign='center';
+  ctx.fillText(ch.name,cx,ch.pose==='sit'?cy+10:cy+12);
+  ctx.textAlign='start';
+  
+  ctx.restore();
+  
+  // Speech bubble
+  drawBubble(cx,oy-4,ch.topic,hv?P.gold:P.ink);
+}
+
+function drawBubble(cx,ty,ti,color){
+  const t=topics[ti],txt=t.title.length>8?t.title.slice(0,8)+'…':t.title;
+  ctx.font='bold 13px "Microsoft YaHei"';
+  const tw=ctx.measureText(txt).width,bw=tw+30,bh=32;
+  const bx=cx-bw/2,by=ty-bh-10;
+  
+  // Bubble background with rounded feel
+  R(bx,by,bw,bh,P.paper);
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
+  // Icon
+  ctx.font='12px "Microsoft YaHei"';
+  ctx.fillText(t.icon,bx+6,by+22);
+  // Text
+  ctx.fillStyle=color;ctx.font='bold 12px "Microsoft YaHei"';
+  ctx.fillText(txt,bx+22,by+22);
+  // Tail
+  ctx.fillStyle=P.paper;ctx.beginPath();
+  ctx.moveTo(cx-6,by+bh);ctx.lineTo(cx,by+bh+8);ctx.lineTo(cx+6,by+bh);ctx.fill();
+  ctx.strokeStyle=color;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(cx-6,by+bh);ctx.lineTo(cx,by+bh+8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,by+bh+8);ctx.lineTo(cx+6,by+bh);ctx.stroke();
+}
+
+// ═══════════════════════════════════════
+//  DUST MOTES & ATMOSPHERE
+// ═══════════════════════════════════════
+function drawAtmosphere(f){
+  // Dust motes floating in firelight
+  dustMotes.forEach(d=>{
+    d.x+=d.vx+Math.sin(f*0.01+d.s)*0.2;
+    d.y+=d.vy;
+    d.a=0.2+Math.sin(f*0.02+d.x*0.01)*0.15;
+    if(d.y<80||d.x<0||d.x>W){d.y=H*0.5+Math.random()*200;d.x=Math.random()*W;d.a=0}
+    ctx.fillStyle=P.warm+d.a+')';
+    R(d.x,d.y,d.s,d.s,P.warm+d.a+')');
+  });
+  
+  // Overall warm ambient from fireplace
+  const grad=ctx.createRadialGradient(130,280,10,130,280,400);
+  grad.addColorStop(0,'rgba(255,140,40,0.04)');
+  grad.addColorStop(1,'rgba(255,140,40,0)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  
+  // Vignette
+  const vg=ctx.createRadialGradient(W/2,H/2,200,W/2,H/2,700);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(10,5,2,0.3)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+}
+
+// ═══════════════════════════════════════
+//  HIT DETECTION & INTERACTION
+// ═══════════════════════════════════════
+function hitChar(mx,my){
+  const r=c.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
+  const cx2=(mx-r.left)*sx,cy2=(my-r.top)*sy;
+  for(let i=chars.length-1;i>=0;i--){
+    const ch=chars[i],dx=cx2-ch.x,dy=cy2-(ch.y-40);
+    if(dx*dx+dy*dy<55*55)return i;
+  }return -1;
+}
+
+// ═══════════════════════════════════════
+//  INIT & MAIN LOOP
+// ═══════════════════════════════════════
+let chars=charDefs.map(d=>({...d})),hv=-1,f=0;
+c.addEventListener('mousemove',e=>{const h=hitChar(e.clientX,e.clientY);if(h!==hv){hv=h;c.style.cursor=h>=0?'pointer':'default'}});
+c.addEventListener('click',e=>{const h=hitChar(e.clientX,e.clientY);if(h>=0)window.location.href='pixel-discussion-v5.html?topic='+encodeURIComponent(topics[chars[h].topic].title)});
+c.addEventListener('mouseleave',()=>{hv=-1});
+
+function tick(){
+  f++;
+  ctx.clearRect(0,0,W,H);
+  
+  // Update walking characters
+  updateWalkers(f);
+  
+  // Background
+  drawRoom(f);
+  
+  // Back wall decorations
+  drawFireplace(f);
+  drawWindow(310,60,100,120,f);
+  drawWindow(860,60,100,120,f);
+  drawTitleSign();
+  drawBoard();
+  drawWallDecor(700,170);
+  drawCandleWall(280,180,f);
+  drawCandleWall(770,160,f);
+  drawCandleWall(1180,150,f);
+  
+  // Hanging lanterns
+  drawHangingLantern(500,180,f);
+  drawHangingLantern(780,175,f);
+  
+  // Side decorations
+  drawBookshelf(1140,310);
+  drawBarrelStack(50,540);
+  drawPlant(1200,500,1.2);
+  drawPlant(80,370,0.9);
+  
+  // Main furniture
+  drawSofa(560,380);
+  drawCoffeeTable(560,470);
+  drawArmchair(340,460,'#2E5C80');
+  drawArmchair(760,460,'#5C3060');
+  drawArmchair(380,580,P.redD);
+  
+  // Characters
+  chars.forEach((ch,i)=>drawChar(ch,i===hv,f));
+  
+  // Atmosphere & particles
+  drawAtmosphere(f);
+  
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>
