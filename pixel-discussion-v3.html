@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 讨论中</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#2A1E14;font-family:'Noto Sans SC',sans-serif;
+    overflow:hidden;width:100vw;height:100vh;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #container{
+    width:100vw;height:100vh;max-width:1280px;max-height:720px;
+    aspect-ratio:16/9;display:flex;
+  }
+  /* Left: scene */
+  #scene{flex:0 0 55%;position:relative}
+  #c{position:absolute;top:0;left:0;width:100%;height:100%;
+     image-rendering:pixelated;image-rendering:crisp-edges}
+  #back{
+    position:absolute;top:10px;left:10px;z-index:5;
+    background:rgba(251,242,221,0.92);border:2px solid #5C3A1E;
+    color:#2D2D2D;font-family:'Noto Sans SC',sans-serif;
+    font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;
+  }#back:hover{color:#C84B31;border-color:#C84B31}
+  
+  /* Right: chat */
+  #chat{
+    flex:1;display:flex;flex-direction:column;
+    background:#FBF2DD;border-left:4px solid #5C3A1E;
+    font-size:13px;
+  }
+  #chat-hdr{
+    padding:14px;font-weight:700;color:#2D2D2D;
+    border-bottom:2px solid #DDD0A8;text-align:center;
+    font-size:14px;letter-spacing:3px;flex-shrink:0;
+  }
+  #msgs{
+    flex:1;overflow-y:auto;padding:10px 12px;
+    display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth;
+  }
+  .msg{display:flex;flex-direction:column;max-width:90%;animation:fIn .25s ease}
+  .msg.self{align-self:flex-end}.msg.other{align-self:flex-start}
+  .msg .nm{font-size:10px;font-weight:700;margin-bottom:2px;padding:0 4px}
+  .msg.self .nm{text-align:right;color:#C84B31}.msg.other .nm{color:#264653}
+  .msg .bb{padding:7px 10px;border-radius:2px;font-size:12px;line-height:1.5;word-break:break-word}
+  .msg.self .bb{background:#2D2D2D;color:#FBF2DD}
+  .msg.other .bb{background:#FFF;color:#2D2D2D;border:1px solid #DDD0A8}
+  .msg .tm{font-size:9px;color:#999;margin-top:2px;padding:0 4px}
+  .msg.self .tm{text-align:right}
+  @keyframes fIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  #typing{padding:4px 12px 8px;font-size:11px;color:#999;font-style:italic;min-height:20px;flex-shrink:0}
+  #inp-wrap{padding:10px 12px;border-top:2px solid #DDD0A8;display:flex;gap:6px;flex-shrink:0}
+  #inp-wrap input{
+    flex:1;border:2px solid #DDD0A8;padding:8px 10px;
+    font-family:'Noto Sans SC',sans-serif;font-size:13px;
+    background:#FFF;color:#2D2D2D;outline:none
+  }#inp-wrap input:focus{border-color:#8B6914}
+  #inp-wrap button{
+    border:2px solid #2D2D2D;background:#2D2D2D;color:#FBF2DD;
+    font-family:'Noto Sans SC',sans-serif;font-size:12px;font-weight:700;
+    padding:8px 16px;cursor:pointer;letter-spacing:2px;white-space:nowrap
+  }#inp-wrap button:hover{background:#C84B31;border-color:#C84B31}
+</style>
+</head>
+<body>
+<div id="container">
+<div id="scene">
+  <canvas id="c"></canvas>
+  <button id="back" onclick="history.back()">← 返回沙龙</button>
+</div>
+<div id="chat">
+  <div id="chat-hdr">💬 讨论中</div>
+  <div id="msgs"></div>
+  <div id="typing"></div>
+  <div id="inp-wrap">
+    <input type="text" id="mi" placeholder="输入你的观点，加入讨论…" maxlength="100"/>
+    <button onclick="send()">发 言</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══ Canvas scene ═══
+const W=350,H=360,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+function sz(){const s=Math.min(scene.clientWidth/W,scene.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
+window.addEventListener('resize',sz);sz();
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x|0,y|0,w|0,h|0)}
+
+const P={
+  wall:'#FBF2DD',wain:'#EDDFBE',floor:'#C09248',flL:'#D0A860',flD:'#A87830',
+  rug:'#B8402E',rugG:'#E0A050',rugC:'#D06838',sh:'rgba(0,0,0,0.06)',
+  wd:'#5C3A1E',wdL:'#7A5230',wdD:'#3E2410',gold:'#D4A843',
+  g1:'#2D6A4F',g2:'#40916C',g3:'#52B788',g4:'#74A85A',
+};
+
+const charColors=[
+  {name:'阿哲',sx:'#F4C9A8',hr:'#2D1B0E',hr2:'#4A2C18',top:'#264653',t2:'#1D353F',bot:'#3D3D5C'},
+  {name:'小棠',sx:'#FDE0C8',hr:'#5C2E0A',hr2:'#7A3E18',top:'#C84B31',t2:'#9E2B20',bot:'#4A4A6A'},
+  {name:'青叶',sx:'#F5D6C0',hr:'#1A1A2E',hr2:'#2D2D4A',top:'#2D6A4F',t2:'#1B4332',bot:'#5A5A6A'},
+  {name:'言午',sx:'#F0C8A8',hr:'#4A3520',hr2:'#6B4E30',top:'#D4A843',t2:'#B8922E',bot:'#3D3A4A'},
+  {name:'蓝山',sx:'#F8D8C0',hr:'#2C1810',hr2:'#5A3830',top:'#457B9D',t2:'#1D3557',bot:'#4A4A5A'},
+];
+let frame=0,active=-1;
+
+function drawChar(cx,cy,ci,act){
+  const s=2.2,ox=cx-5*s,oy=cy-22*s;
+  ctx.save();
+  ctx.fillStyle=P.sh;ctx.beginPath();ctx.ellipse(cx,cy+3,13,3.5,0,0,Math.PI*2);ctx.fill();
+  // legs
+  R(ox+2*s,oy+16*s,2*s,7*s,ci.bot);R(ox+8*s,oy+16*s,2*s,7*s,ci.bot);
+  // body
+  R(ox+1.5*s,oy+9*s,9*s,8*s,ci.top);R(ox+1.5*s,oy+14*s,9*s,2.5*s,ci.t2);
+  // arms
+  if(act){R(ox,oy+8*s,2*s,7*s,ci.top);R(ox+10*s,oy+7*s,2*s,7*s,ci.top)}
+  else{R(ox+0.5*s,oy+9*s,2*s,6*s,ci.top);R(ox+9.5*s,oy+9*s,2*s,6*s,ci.top)}
+  // head
+  R(ox+0.5*s,oy-1*s,11*s,5*s,ci.hr);R(ox+0.5*s,oy+2*s,2*s,4*s,ci.hr);R(ox+9.5*s,oy+2*s,2*s,4*s,ci.hr);
+  R(ox+2*s,oy+1*s,8*s,5.5*s,ci.sx);
+  R(ox+5*s,oy+3*s,2*s,1.5*s,'#1A1A1A');R(ox+9*s,oy+3*s,2*s,1.5*s,'#1A1A1A');
+  R(ox+3*s,oy+4*s,1.5*s,1*s,'rgba(200,100,100,0.45)');R(ox+8.5*s,oy+4*s,1.5*s,1*s,'rgba(200,100,100,0.45)');
+  R(ox+6*s,oy+5.5*s,1.5*s,0.8*s,'#8B5E5E');
+  R(ox+1*s,oy,10*s,2*s,ci.hr2);
+  if(Math.floor(frame/150)%3===0&&frame%150<5)R(ox+3*s,oy+3.5*s,7*s,1*s,ci.sx);
+  if(act){ctx.strokeStyle='rgba(212,168,67,0.6)';ctx.lineWidth=1.2;ctx.beginPath();ctx.roundRect(ox-2,oy-3,14*s,24*s,3);ctx.stroke()}
+  ctx.fillStyle='#6B5B4A';ctx.font='6px "Noto Sans SC"';ctx.textAlign='center';ctx.fillText(ci.name,cx,cy+6);ctx.textAlign='start';
+  ctx.restore();
+}
+
+function drawScene(){
+  // Room
+  R(0,0,W,112,P.wall);R(0,110,W,2,'#DDD0A8');R(0,112,W,10,P.wain);
+  R(0,122,W,H-122,P.floor);
+  for(let y=122;y<H;y+=10)R(0,y,W,y,'',false); // placeholder — just floor
+  // Rug
+  const rx=50,ry=245,rw=250,rh=52;
+  R(rx,ry,rw,rh,P.rug);R(rx+4,ry+4,rw-8,rh-8,P.rugC);R(rx+8,ry+8,rw-16,rh-16,P.rugG);
+  // Side furniture
+  R(290,200,28,16,P.wdL); // table
+  R(292,216,3,14,P.wdD);R(315,216,3,14,P.wdD);
+  R(10,200,12,10,'#BC6C25');R(12,195,4,10,P.g2);R(16,197,3,8,P.g3); // plant
+  
+  // Characters in semi-circle
+  const pos=[{x:100,y:255},{x:175,y:248},{x:175,y:258},{x:250,y:252},{x:260,y:258}];
+  charColors.forEach((ci,i)=>drawChar(pos[i].x,pos[i].y,ci,i===active));
+}
+
+// ═══ Chat ═══
+const params=new URLSearchParams(window.location.search);
+document.getElementById('chat-hdr').textContent='💬 '+(params.get('topic')||'知识讨论');
+const msgs=document.getElementById('msgs'),typing=document.getElementById('typing'),mi=document.getElementById('mi');
+
+function now(){const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')}
+function add(n,t,is){
+  const d=document.createElement('div');d.className='msg '+(is?'self':'other');
+  d.innerHTML=`<div class="nm">${is?'你':n}</div><div class="bb">${t}</div><div class="tm">${now()}</div>`;
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+}
+
+const seed=[
+  {n:'阿哲',t:'我觉得关键还是底层玩法要够好，抽签只是放大器，不能指望它救一个本身不好玩的玩法。'},
+  {n:'小棠',t:'同意。之前我们项目踩过坑，加了一堆随机BUFF玩家完全不买账，数据跟老玩法差不多。'},
+  {n:'青叶',t:'但PVE里面可以放开手脚做——漫威争锋在PVE里直接放大数字体验，玩家爽就完事了。'},
+  {n:'言午',t:'角色适配这块工作量真的很容易爆炸。漫威每个英雄都得单独设计，我们后来搞了通用流派才解决。'},
+  {n:'蓝山',t:'对，通用流派反而成了玩家讨论的热点话题，意外收获。这个经验值得参考。'},
+];
+let si=0;
+function playSeed(){
+  if(si>=seed.length)return;
+  const s=seed[si];add(s.n,s.t);active=si;si++;
+  if(si<seed.length)setTimeout(playSeed,1800+Math.random()*1200);
+  else setTimeout(()=>active=-1,1500);
+}setTimeout(playSeed,600);
+
+function send(){
+  const t=mi.value.trim();if(!t)return;mi.value='';add('',t,true);active=-1;
+  typing.textContent='对方正在输入…';
+  const rs=charColors.map(c=>c.name),r=rs[Math.floor(Math.random()*rs.length)];
+  const ri=charColors.findIndex(c=>c.name===r);
+  const replies=['这个角度很有意思，能展开说说具体的案例吗？','确实，我们之前也遇到过类似的情况。','我觉得可以从另一个方向来看这个问题——','有道理！不过实操层面可能有些挑战。','同意这个判断，跟实际项目里的经验很吻合。'];
+  setTimeout(()=>{typing.textContent='';add(r,replies[Math.floor(Math.random()*replies.length)]);active=ri;setTimeout(()=>active=-1,2500)},1000+Math.random()*1500);
+}
+mi.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+
+// ═══ Loop ═══
+function tick(){frame++;drawScene();requestAnimationFrame(tick)}tick();
+</script>
+</body>
+</html>

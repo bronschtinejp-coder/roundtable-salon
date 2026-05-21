@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 知识沙龙</title>
+<style>
+  /* Using system font Microsoft YaHei */
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#2A1E14;font-family:'Microsoft YaHei','微软雅黑',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  #container{position:relative;width:100vw;height:100vh;max-width:2560px;max-height:1440px;aspect-ratio:16/9}
+  #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+</style>
+</head>
+<body><div id="container"><canvas id="c"></canvas></div>
+
+<script>
+const W=1280,H=720,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+function rz(){const ct=document.getElementById('container');const s=Math.min(ct.clientWidth/W,ct.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
+window.addEventListener('resize',rz);rz();
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x|0,y|0,w|0,h|0)}
+function L(x1,y1,x2,y2,c,wid=1){ctx.strokeStyle=c;ctx.lineWidth=wid;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+
+// Palette — Stardew warm tones
+const P={
+  wall:'#FBF2DD',wain:'#EDDFBE',wainT:'#DDD0A8',base:'#CDBD90',
+  floor:'#C09248',floorD:'#A87830',floorL:'#D0A860',
+  rug:'#B8402E',rugB:'#8C2418',rugG:'#E0A050',rugC:'#D06838',
+  wd:'#5C3A1E',wdL:'#7A5230',wdD:'#3E2410',
+  g1:'#2D6A4F',g2:'#40916C',g3:'#52B788',g4:'#74A85A',g5:'#95C86A',
+  gold:'#D4A843',brass:'#B8962E',red:'#C84B31',redD:'#A03020',
+  sky:'#87CEEB',skyL:'#B8E4F0',grass:'#7CB342',hill:'#5D8A3C',
+  cork:'#C49464',corkBg:'#EDE0C8',paper:'#FEFAE0',ink:'#2D2D2D',
+  sign:'#8B5E3C',signL:'#A07850',signD:'#4A2C18',
+  pot:'#BC6C25',potD:'#9C5A1C',
+  sh:'rgba(0,0,0,0.06)',shD:'rgba(0,0,0,0.12)',
+};
+
+const topics=[
+  {title:'抽签玩法融合的成与败',tag:'Roguelike'},
+  {title:'社交系统设计的得与失',tag:'社交'},
+  {title:'AI如何重塑关卡设计',tag:'AI+游戏'},
+  {title:'叙事与机制的边界',tag:'叙事'},
+  {title:'商业化体验平衡',tag:'商业化'},
+  {title:'开放世界内容密度',tag:'关卡'},
+];
+
+// ═══════════════════════════════════════
+//  ROOM — salon conversation circle
+// ═══════════════════════════════════════
+// Design: central coffee table + surrounding sofa & armchairs
+// Everyone faces the center — true salon discussion layout
+
+function drawRoom(){
+  R(0,0,W,224,P.wall);
+  R(0,220,W,6,P.wainT);R(0,224,W,20,P.wain);R(0,240,W,8,P.base);
+  R(0,248,W,H-248,P.floor);
+  for(let y=248;y<H;y+=20)L(0,y,W,y,P.floorL,0.4);
+  for(let row=0;row<50;row++){
+    const y=248+row*20,off=(row&1)?0:W/2;
+    for(let x=off;x<W;x+=170+Math.sin(row*1.9)*40)if(x<W)L(x,y,x,y+10,P.floorD,0.3);
+  }
+  // Floor wear — traffic paths around the conversation circle
+  R(440,600,120,12,'rgba(168,120,48,0.18)');
+  R(260,620,160,10,'rgba(168,120,48,0.14)');
+  R(740,620,160,10,'rgba(168,120,48,0.14)');
+  
+  // Persian rug — large, under the entire conversation circle
+  const rx=220,ry=288,rw=680,rh=360;
+  R(rx,ry,rw,rh,P.rug);R(rx+8,ry+8,rw-16,rh-16,P.rugC);R(rx+16,ry+16,rw-32,rh-32,P.rugG);
+  ctx.fillStyle=P.rugB;
+  for(let i=0;i<7;i++){const dx=rx+80+i*88,dy=ry+rh/2;R(dx-14,dy-8,28,16,'');ctx.fillStyle=P.rugB;ctx.fillRect(dx-10,dy-4,20,8)}
+  for(let sx=rx+50;sx<rx+rw-50;sx+=100){R(sx-6,ry+14,12,10,P.rugB);R(sx-6,ry+rh-24,12,10,P.rugB)}
+  for(let tx=rx+16;tx<rx+rw-16;tx+=28){R(tx,ry-8,4,8,P.rug);R(tx+6,ry-8,4,8,P.rug);R(tx,ry+rh,4,8,P.rug);R(tx+6,ry+rh,4,8,P.rug)}
+}
+
+// ═══════════════════════════════════════
+//  TITLE SIGN — carved wood, hanging
+// ═══════════════════════════════════════
+function drawTitleSign(){
+  const sx=440, sy=28, sw=400, sh=88;
+  L(sx+20,0,sx+20,sy+0,P.wdD,4);L(sx+sw-20,0,sx+sw-20,sy+0,P.wdD,4);
+  R(sx-4,0,8,8,P.brass);R(sx+sw-4,0,8,8,P.brass);
+  R(sx+6,sy+6,sw,sh,P.wdD);
+  R(sx,sy,sw,sh,P.sign);R(sx+4,sy+4,sw-8,sh-8,P.signL);
+  R(sx+8,sy+6,sw-16,6,'rgba(255,255,255,0.15)');
+  R(sx+8,sy+sh-8,sw-16,4,'rgba(0,0,0,0.15)');
+  R(sx+16,sy+16,sw-32,sh-32,P.signD);R(sx+18,sy+18,sw-36,sh-36,P.wdD);
+  ctx.fillStyle='#F4E8C8';ctx.font='bold 44px "Noto Sans SC"';ctx.textAlign='center';
+  ctx.fillText('回 响 圆 桌',sx+sw/2,sy+68);
+  ctx.fillStyle='rgba(244,232,200,0.7)';ctx.font='18px "Noto Sans SC"';
+  ctx.fillText('知 识 沙 龙',sx+sw/2,sy+84);
+  ctx.textAlign='start';
+}
+
+// ═══════════════════════════════════════
+//  WINDOW — upper left, morning light
+// ═══════════════════════════════════════
+function drawWindow(x,y){
+  const w=100,h=80;
+  R(x-6,y-6,w+12,h+12,P.wdD);R(x,y,w,h,P.wd);
+  R(x+6,y+6,w-12,h-12,P.sky);R(x+6,y+6,w-12,20,P.skyL);
+  R(x+6,y+h-36,w-12,12,P.hill);R(x+16,y+h-40,28,10,P.grass);R(x+56,y+h-34,36,10,P.grass);
+  R(x+w/2-2,y,4,h,P.wdL);R(x,y+h/2-2,w,4,P.wdL);
+  ctx.fillStyle='rgba(255,255,220,0.08)';ctx.beginPath();
+  ctx.moveTo(x+16,y+6);ctx.lineTo(x+w-16,y+6);ctx.lineTo(x+w+70,y+h+80);ctx.lineTo(x-70,y+h+80);ctx.fill();
+}
+
+// ═══════════════════════════════════════
+//  HOT TOPICS BOARD — Zone 5 wall
+// ═══════════════════════════════════════
+function drawBoard(){
+  const bx=976,by=24,bw=276,bh=228;
+  R(bx-6,by-6,bw+12,bh+12,P.wdD);R(bx,by,bw,bh,P.cork);R(bx+6,by+6,bw-12,bh-12,P.corkBg);
+  ctx.fillStyle=P.wdD;ctx.font='bold 18px "Microsoft YaHei"';
+  ctx.fillText('🔥 本周热点',bx+12,by+40);
+  L(bx+8,by+48,bx+bw-8,by+48,P.cork,2);
+  topics.forEach((t,i)=>{
+    const cy2=by+56+i*26;
+    R(bx+12,cy2+6,6,6,P.red);
+    ctx.fillStyle=P.ink;ctx.font='bold 14px "Microsoft YaHei"';
+    const txt=t.title.length>9?t.title.slice(0,9)+'…':t.title;
+    ctx.fillText(txt,bx+24,cy2+16);
+    ctx.fillStyle=P.red;ctx.font='11px "Microsoft YaHei"';
+    ctx.fillText('#'+t.tag,bx+24,cy2+24);
+  });
+}
+
+// ═══════════════════════════════════════
+//  FURNITURE — salon conversation circle
+// ═══════════════════════════════════════
+
+// ── Central seating: sofa + armchairs + coffee table ──
+function drawSofa(x,y){
+  // 3-seat sofa, (x,y) = center of seat top
+  const sw=160,sd=60,sh=56;
+  R(x-sw/2+4,y+6,sw-8,10,P.shD);
+  R(x-sw/2,y-sh,sw,sh,P.wdD);
+  R(x-sw/2+4,y-sh+4,sw-8,sh-8,P.wd);
+  R(x-sw/2+4,y-sh+4,sw-8,6,P.wdL);
+  R(x-sw/2-4,y,14,34,P.wdD);R(x+sw/2-10,y,14,34,P.wdD);
+  R(x-sw/2-2,y+2,10,28,P.wd);R(x+sw/2-8,y+2,10,28,P.wd);
+  R(x-sw/2+2,y,sw-4,24,P.wdL);
+  R(x-sw/4,y+2,3,20,P.wdD);R(x+sw/4-3,y+2,3,20,P.wdD);
+  R(x-sw/2+8,y+22,sw-16,16,P.wdD);
+  R(x-sw/2+8,y+22,sw-16,4,P.wdL);
+  R(x-sw/3-2,y+38,10,14,P.wdD);R(x+sw/3-8,y+38,10,14,P.wdD);
+  R(x-sw/2+8,y-8,22,16,P.red);R(x-sw/2+10,y-6,18,12,P.redD);
+  R(x+sw/2-30,y-8,22,16,P.gold);R(x+sw/2-28,y-6,18,12,'#E0A050');
+}
+
+function drawArmchair(x,y){
+  const aw=52,ah=46;
+  R(x-aw/2+2,y+4,aw-4,8,P.shD);
+  R(x-aw/2,y-ah,aw,ah,P.wd);
+  R(x-aw/2+3,y-ah+3,aw-6,ah-6,P.wdL);
+  R(x-aw/2+3,y-ah+3,aw-6,8,P.wd);
+  R(x-aw/2-4,y-3,12,22,P.wdD);R(x+aw/2-8,y-3,12,22,P.wdD);
+  R(x-aw/2-2,y-1,8,18,P.wd);R(x+aw/2-6,y-1,8,18,P.wd);
+  R(x-aw/2+1,y,aw-2,18,P.wdL);
+  R(x-aw/2+6,y+18,aw-12,12,P.wdD);
+  R(x-aw/2+6,y+18,aw-12,3,P.wdL);
+  R(x-aw/3-2,y+30,7,10,P.wdD);R(x+aw/3-5,y+30,7,10,P.wdD);
+}
+
+function drawCoffeeTable(x,y){
+  const r=44;
+  ctx.fillStyle=P.shD;ctx.beginPath();ctx.ellipse(x,y+5,r+6,16,0,0,Math.PI*2);ctx.fill();
+  R(x-10,y+10,20,22,P.wdD);
+  R(x-20,y+32,40,6,P.wdD);R(x-18,y+34,36,4,P.wd);
+  ctx.fillStyle=P.wdL;ctx.beginPath();ctx.ellipse(x,y,r,14,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=P.wd;ctx.beginPath();ctx.ellipse(x,y-2,r-3,10,0,0,Math.PI*2);ctx.fill();
+  R(x-16,y-9,14,8,P.paper);R(x-14,y-7,10,3,P.ink);
+  R(x+6,y-8,10,10,P.gold);R(x+8,y-6,6,6,'#F4E8C8');
+  R(x-4,y-5,12,7,P.paper);
+}
+
+// ── Side furniture (keepers, repositioned) ──
+function drawTallPlant(x,y){R(x+4,y+44,28,20,P.pot);R(x+8,y+40,20,6,P.potD);R(x+6,y-8,6,40,P.g1);R(x+12,y-14,8,48,P.g2);R(x+18,y-4,6,36,P.g3);R(x+22,y-2,4,28,P.g4)}
+function drawLamp(x,y){R(x+6,y+28,12,4,P.wdD);R(x+10,y-20,4,52,P.wd);R(x+4,y-24,16,14,P.gold);R(x+6,y-20,12,6,'#F4E8C8');ctx.fillStyle='rgba(255,240,200,0.1)';ctx.beginPath();ctx.arc(x+12,y+4,44,0,Math.PI*2);ctx.fill()}
+function drawCoatRack(x,y){R(x+8,y-12,4,60,P.wdD);R(x+10,y+44,10,4,P.wdD);R(x+4,y-16,16,6,P.wd);R(x+2,y-16,2,8,P.wdD);R(x+14,y-16,2,8,P.wdD);R(x+14,y-12,10,20,P.red);R(x+16,y-8,6,12,P.redD)}
+function drawSnackCart(x,y){
+  R(x+4,y+8,48,16,P.wdD);R(x,y,56,10,P.wd);R(x,y-4,6,8,P.wdD);R(x+50,y-4,6,8,P.wdD);
+  R(x+2,y+20,4,16,P.wdD);R(x+50,y+20,4,16,P.wdD);
+  R(x+8,y-10,14,10,P.gold);R(x+10,y-8,10,6,'#F4E8C8');
+  R(x+28,y-8,10,8,'#FFFFFF');R(x+40,y-10,12,10,'#F5E6C8');
+}
+function drawSmallPlant(x,y){R(x,y+24,20,16,P.pot);R(x+4,y+20,12,6,P.potD);R(x+2,y+4,4,18,P.g1);R(x+6,y,6,22,P.g2);R(x+12,y+6,4,16,P.g3)}
+function drawBookshelf(x,y){
+  const w=52,h=96;
+  R(x,y,w,h,P.wdD);R(x+4,y+4,w-8,h-8,P.wd);
+  for(let sy=y+14;sy<y+h-18;sy+=28){
+    R(x+4,sy,w-8,6,P.wdD);
+    const bks=['#C84B31','#264653','#2D6A4F','#D4A843','#8B5E3C','#457B9D','#6B3A5B'];
+    for(let bx=x+10;bx<x+w-12;bx+=8)R(bx,sy+6,5,8+((bx*7+sy)%10),bks[(bx+sy)%bks.length|0]);
+  }
+}
+function drawGlobe(x,y){
+  R(x+2,y+24,16,4,P.wdD);R(x+6,y-12,10,40,P.wd);
+  R(x-2,y-12,28,24,'#5B8C8C');R(x+2,y-8,20,16,'#7AB8B8');
+  R(x+6,y-4,6,6,'#3D6B4A');R(x+16,y-6,4,8,'#3D6B4A');
+}
+function drawClock(x,y){
+  R(x+4,y-16,28,56,P.wdD);R(x+8,y-12,20,52,P.wd);
+  R(x+8,y-8,20,20,'#FEFAE0');R(x+10,y-6,16,16,'#FFFFFF');
+  R(x+18,y-2,4,2,P.ink);R(x+18,y-6,2,6,P.ink);
+  R(x+16,y+16,4,20,P.brass);R(x+14,y+32,8,6,P.gold);
+}
+
+// ── Layout groups ──
+function drawLeftSide(){
+  drawCoatRack(90,300);
+  drawTallPlant(80,530);
+  drawSnackCart(100,400);
+}
+
+function drawRightSide(){
+  drawBookshelf(1120,320);
+  drawGlobe(1060,400);
+  drawClock(1220,310);
+  drawLamp(1100,550);
+  drawSmallPlant(1180,580);
+}
+
+function drawCircle(){
+  drawSofa(560,340);
+  drawCoffeeTable(560,450);
+}
+
+function drawAllArmchairs(){
+  drawArmchair(320,430);
+  drawArmchair(800,430);
+  drawArmchair(360,570);
+  drawArmchair(760,570);
+}
+
+// ═══════════════════════════════════════
+//  CHARACTERS — salon conversation circle
+// ═══════════════════════════════════════
+// 5 seated around coffee table + 1 standing host near tea cart
+// 白露 (sit, sofa L):  sofa left, core discussant
+// 青叶 (sit, sofa R):  sofa right, core discussant
+// 阿哲 (sit, armchair L):  left armchair, facing center
+// 小棠 (sit, armchair R):  right armchair, facing center
+// 蓝山 (sit, armchair L2): lower left armchair
+// 言午 (stand, left):  near tea cart — host/moderator
+
+const charDefs=[
+  {name:'白露',sx:'#FADFC8',hr:'#1C1C1C',hr2:'#3A3A3A',top:'#E8E0D5',t2:'#C8C0B5',bot:'#4E4E6E',
+   x:490,y:365,pose:'sit',dir:1,topic:5},  // sofa L
+  {name:'青叶',sx:'#F5D6C0',hr:'#1A1A2E',hr2:'#2D2D4A',top:'#2D6A4F',t2:'#1B4332',bot:'#5A5A6A',
+   x:630,y:365,pose:'sit',dir:1,topic:2},  // sofa R
+  {name:'阿哲',sx:'#F4C9A8',hr:'#2D1B0E',hr2:'#4A2C18',top:'#264653',t2:'#1D353F',bot:'#3D3D5C',
+   x:320,y:455,pose:'sit',dir:1,topic:0,chX:320,chY:455},  // armchair L
+  {name:'小棠',sx:'#FDE0C8',hr:'#5C2E0A',hr2:'#7A3E18',top:'#C84B31',t2:'#9E2B20',bot:'#4A4A6A',
+   x:800,y:455,pose:'sit',dir:-1,topic:1,chX:800,chY:455},  // armchair R
+  {name:'蓝山',sx:'#F8D8C0',hr:'#2C1810',hr2:'#5A3830',top:'#457B9D',t2:'#1D3557',bot:'#4A4A5A',
+   x:360,y:595,pose:'sit',dir:1,topic:4,chX:360,chY:595},  // armchair L2
+  {name:'言午',sx:'#F0C8A8',hr:'#4A3520',hr2:'#6B4E30',top:'#D4A843',t2:'#B8922E',bot:'#3D3A4A',
+   x:170,y:460,pose:'stand',dir:1,topic:3},  // near tea cart — host
+];
+
+// ═══════════════════════════════════════
+//  CHARACTER DRAWING
+// ═══════════════════════════════════════
+function drawChar(c,hv,f){
+  const s=4.4,cx=c.x,cy=c.y-(c.pose==='sit'?6:0),ox=cx-5*s,oy=cy-22*s;
+  ctx.save();
+  ctx.fillStyle=P.sh;ctx.beginPath();ctx.ellipse(cx,cy+3,13,3.5,0,0,Math.PI*2);ctx.fill();
+  // Legs
+  if(c.pose==='stand'||c.pose==='lean'){
+    R(ox+2*s,oy+16*s,2*s,7*s,c.bot);R(ox+8*s,oy+16*s,2*s,7*s,c.bot);
+    R(ox+2*s,oy+22*s,2*s,1.5*s,'#2A2A3A');R(ox+8*s,oy+22*s,2*s,1.5*s,'#2A2A3A');
+  }else if(c.pose==='sit'){
+    R(ox+1*s,oy+15*s,3*s,3*s,c.bot);R(ox+1*s,oy+17*s,2*s,4*s,c.bot);R(ox+8*s,oy+17*s,2*s,4*s,c.bot);
+  }else{
+    const l=Math.sin(f*0.15)*2.2;
+    R(ox+2*s,oy+16*s,2*s,7*s+l,c.bot);R(ox+8*s,oy+16*s,2*s,7*s-l,c.bot);
+  }
+  // Body
+  if(c.pose==='sit'){R(ox+1.5*s,oy+9*s,9*s,7*s,c.top);R(ox+1.5*s,oy+13*s,9*s,2.5*s,c.t2)}
+  else{R(ox+1.5*s,oy+9*s,9*s,8*s,c.top);R(ox+1.5*s,oy+14*s,9*s,2.5*s,c.t2)}
+  // Arms
+  if(c.pose==='stand'){R(ox+0.5*s,oy+9*s,2*s,6*s,c.top);R(ox+9.5*s,oy+9*s,2*s,6*s,c.top)}
+  else if(c.pose==='sit'){R(ox+0.5*s,oy+9*s,2*s,5*s,c.top);R(ox+9.5*s,oy+10*s,2*s,4*s,c.top)}
+  else if(c.pose==='walk'){const a=Math.sin(f*0.15)*2;R(ox+0.5*s,oy+9*s,2*s,7*s+a,c.top);R(ox+9.5*s,oy+9*s,2*s,7*s-a,c.top)}
+  else{R(ox+0.5*s,oy+9*s,2*s,5*s,c.top);R(ox+9*s,oy+7*s,2*s,5*s,c.top)}
+  // Head
+  R(ox+0.5*s,oy-2*s,11*s,5*s,c.hr);R(ox+0.5*s,oy+1*s,2*s,5*s,c.hr);R(ox+9.5*s,oy+1*s,2*s,5*s,c.hr);
+  R(ox+2*s,oy,8*s,6*s,c.sx);
+  if(c.dir>=0){R(ox+5*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A');R(ox+9*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A')}
+  else{R(ox+4*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A');R(ox+8*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A')}
+  R(ox+3*s,oy+3.5*s,1.5*s,1*s,'rgba(200,100,100,0.4)');R(ox+8.5*s,oy+3.5*s,1.5*s,1*s,'rgba(200,100,100,0.4)');
+  R(ox+6*s,oy+5*s,1.5*s,0.8*s,'#8B5E5E');
+  R(ox+1*s,oy-1*s,10*s,2*s,c.hr2);
+  if(Math.floor(f/150)%3===0&&f%150<5)R(ox+3*s,oy+3*s,7*s,1*s,c.sx);
+  if(hv){ctx.strokeStyle='rgba(212,168,67,0.7)';ctx.lineWidth=1.2;ctx.beginPath();ctx.roundRect(ox-2,oy-4,14*s,25*s,3);ctx.stroke();ctx.fillStyle='#3D2B1F';ctx.font='bold 14px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText('点击加入讨论',cx,oy-7);ctx.textAlign='start'}
+  ctx.fillStyle='#6B5B4A';ctx.font='12px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(c.name,cx,c.pose==='sit'?cy+2:cy+6);ctx.textAlign='start';
+  ctx.restore();
+  drawBubble(cx,oy-5,c.topic,hv?P.gold:P.ink);
+}
+
+function drawBubble(cx,ty,ti,color){
+  const t=topics[ti],txt=t.title.length>9?t.title.slice(0,9)+'…':t.title;
+  ctx.font='bold 14px "Microsoft YaHei"';const tw=ctx.measureText(txt).width,bw=tw+24,bh=30,bx=cx-bw/2,by=ty-bh-6;
+  R(bx,by,bw,bh,'#FFFFFF');ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle='#FFFFFF';ctx.beginPath();ctx.moveTo(cx-6,ty-6);ctx.lineTo(cx,ty+2);ctx.lineTo(cx+6,ty-6);ctx.fill();ctx.stroke();
+  ctx.fillStyle=color;ctx.fillText(txt,bx+10,by+24);
+}
+
+// ═══ Hit Detection ═══
+function hitChar(mx,my){
+  const r=c.getBoundingClientRect(),sx=W/r.width,sy=H/r.height,cx=(mx-r.left)*sx,cy=(my-r.top)*sy;
+  for(let i=chars.length-1;i>=0;i--){const c2=chars[i],dx=cx-c2.x,dy=cy-(c2.y-22);if(dx*dx+dy*dy<48*48)return i}return -1;
+}
+
+// ═══ Init & Animate ═══
+let chars=charDefs.map(d=>({...d})),hv=-1,f=0;
+c.addEventListener('mousemove',e=>{const h=hitChar(e.clientX,e.clientY);if(h!==hv){hv=h;c.style.cursor=h>=0?'pointer':'default'}});
+c.addEventListener('click',e=>{const h=hitChar(e.clientX,e.clientY);if(h>=0)window.location.href='pixel-discussion-v3.html?topic='+encodeURIComponent(topics[chars[h].topic].title)});
+c.addEventListener('mouseleave',()=>{hv=-1});
+
+function tick(){
+  f++;
+  
+  // ── DRAW ORDER: back wall → furniture → armchairs → characters ──
+  drawRoom();
+  drawTitleSign();
+  drawBoard();
+  drawWindow(80,50);
+  
+  // Furniture — back to front
+  drawRightSide();
+  drawLeftSide();
+  drawCircle();
+  drawAllArmchairs();
+  
+  // Characters (draw sitting on sofa/armchairs)
+  chars.forEach((c,i)=>drawChar(c,i===hv,f));
+  
+  requestAnimationFrame(tick);
+}tick();
+</script>
+</body>
+</html>
