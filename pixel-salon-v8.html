@@ -317,7 +317,7 @@ function hitChar(mx,my){
 // ═══ Init & Animate ═══
 let chars=charDefs.map(d=>({...d})),hv=-1,f=0;
 c.addEventListener('mousemove',e=>{const h=hitChar(e.clientX,e.clientY);if(h!==hv){hv=h;c.style.cursor=h>=0?'pointer':'default'}});
-c.addEventListener('click',e=>{const h=hitChar(e.clientX,e.clientY);if(h>=0)window.location.href='pixel-discussion-v3.html?topic='+encodeURIComponent(topics[chars[h].topic].title)});
+c.addEventListener('click',e=>{const h=hitChar(e.clientX,e.clientY);if(h>=0)window.location.href='pixel-discussion-v5.html?topic='+encodeURIComponent(topics[chars[h].topic].title)});
 c.addEventListener('mouseleave',()=>{hv=-1});
 
 function tick(){
