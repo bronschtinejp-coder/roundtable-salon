@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 讨论中</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#E8F0F8;font-family:'Microsoft YaHei','微软雅黑',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  #container{width:100vw;height:100vh;max-width:1280px;max-height:720px;aspect-ratio:16/9;display:flex;border:2px solid #C8D0D8;box-shadow:0 4px 24px rgba(0,40,80,0.1)}
+  /* Left: scene */
+  #scene{flex:0 0 30%;position:relative;background:#F0F4F8}
+  #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
+  #back{position:absolute;top:8px;left:8px;z-index:5;background:#3E2210;border:2px solid #E8B830;color:#F5E6C8;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer;transition:all 0.15s}
+  #back:hover{background:#E8B830;color:#2A1808;border-color:#FFD84D}
+  /* Character profile popup */
+  #char-profile{
+    display:none;position:absolute;bottom:12px;left:12px;right:12px;z-index:6;
+    background:#F5E6C8;border:2px solid #E8B830;padding:10px 12px;font-size:10px;
+    line-height:1.6;color:#2A1808;animation:fIn .2s ease;
+  }
+  #char-profile.show{display:block}
+  #char-profile .cp-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  #char-profile .cp-name{font-weight:700;font-size:12px;color:#2A1808}
+  #char-profile .cp-close{cursor:pointer;font-size:12px;color:#8B6B4A}
+  #char-profile .cp-close:hover{color:#E8B830}
+  #char-profile .cp-tag{display:inline-block;background:#2B5E3A;color:#FFF;font-size:9px;padding:1px 6px;margin-right:4px;font-weight:700}
+  #char-profile .cp-stat{font-size:9px;color:#8B6B4A;margin-top:4px}
+  /* Right: chat panel */
+  #chat{flex:1;display:flex;flex-direction:column;background:#F5E6C8;border-left:4px solid #3E2210;font-size:13px;position:relative;overflow:hidden}
+  #chat-hdr{padding:12px 16px;font-weight:700;color:#2A1808;border-bottom:3px solid #8B6B4A;text-align:center;font-size:14px;letter-spacing:2px;flex-shrink:0;background:#E8D5B0;position:relative;z-index:2}
+  #msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;position:relative;z-index:1}
+  #msgs::-webkit-scrollbar{width:8px}
+  #msgs::-webkit-scrollbar-track{background:#E8D5B0}
+  #msgs::-webkit-scrollbar-thumb{background:#8B6B4A;border-radius:4px}
+  .msg{display:flex;flex-direction:column;max-width:88%;animation:fIn .3s ease}
+  .msg.self{align-self:flex-end}.msg.other{align-self:flex-start}
+  .msg .nm{font-size:11px;font-weight:700;margin-bottom:3px;padding:0 6px;letter-spacing:1px}
+  .msg.self .nm{text-align:right;color:#8B2020}.msg.other .nm{color:#264653}
+  .msg .bb{padding:9px 12px;font-size:12px;line-height:1.6;word-break:break-word;border:2px solid;position:relative}
+  .msg.self .bb{background:#3E2210;color:#F5E6C8;border-color:#6B4226;border-radius:2px 2px 0 2px}
+  .msg.other .bb{background:#FFFDF5;color:#2A1808;border-color:#C8B090;border-radius:2px 2px 2px 0;box-shadow:1px 1px 0 rgba(139,107,74,0.15)}
+  .msg .tm{font-size:9px;color:#8B6B4A;margin-top:3px;padding:0 6px}
+  .msg.self .tm{text-align:right}
+  .msg.other .nm::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;border:1px solid rgba(0,0,0,0.2)}
+  .msg.other[data-char="\u963F\u54F2"] .nm::before{background:#264653}
+  .msg.other[data-char="\u5C0F\u68E0"] .nm::before{background:#C84040}
+  .msg.other[data-char="\u9752\u53F6"] .nm::before{background:#2B5E3A}
+  .msg.other[data-char="\u8A00\u5348"] .nm::before{background:#E8B830}
+  .msg.other[data-char="\u84DD\u5C71"] .nm::before{background:#4A7BA8}
+  @keyframes fIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  #typing{padding:5px 14px 8px;font-size:11px;color:#8B6B4A;font-style:italic;min-height:22px;flex-shrink:0;position:relative;z-index:1}
+  #inp-wrap{padding:12px 14px;border-top:3px solid #8B6B4A;display:flex;gap:8px;flex-shrink:0;background:#E8D5B0;position:relative;z-index:2}
+  #inp-wrap input{flex:1;border:2px solid #8B6B4A;padding:9px 12px;font-family:'Microsoft YaHei',sans-serif;font-size:13px;background:#FFFDF5;color:#2A1808;outline:none;transition:border-color 0.2s;display:none}
+  #inp-wrap #mi-rich{
+    flex:1;border:2px solid #8B6B4A;padding:8px 12px;font-family:'Microsoft YaHei',sans-serif;font-size:12px;
+    background:#FFFDF5;color:#2A1808;outline:none;transition:border-color 0.2s;
+    min-height:52px;max-height:120px;overflow-y:auto;line-height:1.6;
+    white-space:pre-wrap;word-break:break-word;
+  }
+  #inp-wrap #mi-rich:focus{border-color:#E8B830;box-shadow:0 0 0 1px #E8B830}
+  #inp-wrap #mi-rich:empty::before{content:attr(data-placeholder);color:#B8A080;pointer-events:none}
+  #inp-wrap #mi-rich .first-line{font-weight:700;font-size:13px}
+  #inp-wrap button{border:2px solid #3E2210;background:#3E2210;color:#F5E6C8;font-family:'Microsoft YaHei',sans-serif;font-size:12px;font-weight:700;padding:9px 18px;cursor:pointer;letter-spacing:2px;white-space:nowrap;transition:all 0.15s}
+  #inp-wrap button:hover{background:#E8B830;color:#2A1808;border-color:#E8B830}
+  #ai-assist-btn{padding:9px 10px !important;letter-spacing:0 !important;font-size:14px !important;background:#E8D5B0 !important;border-color:#E8B830 !important;color:#B8901E !important}
+  #ai-assist-btn:hover{background:#E8B830 !important;color:#2A1808 !important}
+  #ai-assist-btn.active{background:#E8B830 !important;color:#2A1808 !important;box-shadow:0 0 6px rgba(232,184,48,0.4)}
+  #invite-btn{padding:9px 10px !important;letter-spacing:0 !important;font-size:13px !important;font-weight:700 !important;background:#E0F0FF !important;border-color:#4A8BC8 !important;color:#4A8BC8 !important}
+  #invite-btn:hover{background:#4A8BC8 !important;color:#FFF !important}
+  .invite-item{padding:6px 8px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:6px;border-radius:2px;margin:2px 0}
+  .invite-item:hover{background:#F0F7FF}
+  .invite-item .inv-dot{width:8px;height:8px;border-radius:50%}
+  .invite-item .inv-name{font-weight:700;color:#2D3748}
+
+  /* ═══ AI Material Sidebar ═══ */
+  #ai-sidebar{
+    position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;
+    background:rgba(42,24,8,0.5);display:none;flex-direction:column;justify-content:flex-end;
+  }
+  #ai-sidebar.show{display:flex}
+  #ai-panel{
+    background:#F5E6C8;border-top:3px solid #E8B830;max-height:60%;overflow-y:auto;
+    padding:0;animation:slideUp .25s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  #ai-panel-hdr{
+    padding:10px 14px;background:#3E2210;color:#E8B830;font-size:12px;font-weight:700;
+    display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1;
+  }
+  #ai-panel-hdr span{cursor:pointer;font-size:14px;padding:0 4px}
+  #ai-panel-hdr span:hover{color:#FFD84D}
+  .ai-card{
+    margin:10px 12px;padding:10px 12px;background:#FFFDF5;border:1px solid #C8B090;
+    border-left:3px solid #E8B830;font-size:11px;line-height:1.6;color:#2A1808;
+  }
+  .ai-card .ai-src{font-size:9px;color:#8B6B4A;margin-top:6px}
+  .ai-card .ai-tag{display:inline-block;background:#E8B830;color:#2A1808;font-size:9px;padding:1px 6px;margin-right:4px;font-weight:700}
+  .ai-card .ai-title{font-weight:700;font-size:12px;margin-bottom:6px;color:#2A1808}
+  .ai-card .ai-summary{margin-bottom:6px}
+  .ai-card .ai-points{margin:6px 0;padding-left:14px}
+  .ai-card .ai-points li{margin-bottom:3px;font-size:10px;line-height:1.5}
+  .ai-card .ai-quote{font-size:10px;color:#5C4033;border-left:2px solid #C8B090;padding-left:8px;margin:6px 0;font-style:italic}
+  .ai-card .ai-data{display:inline-block;background:#2B5E3A;color:#FFF;font-size:9px;padding:1px 6px;margin-top:4px;font-weight:700;border-radius:1px}
+  .ai-card .ai-relevance{font-size:9px;color:#2B5E3A;font-weight:700;margin-top:4px}
+  .ai-card .ai-use-btn{
+    display:inline-block;margin-top:6px;padding:3px 10px;font-size:10px;font-weight:700;
+    background:#E8D5B0;border:1px solid #B8901E;color:#2A1808;cursor:pointer;
+    font-family:'Microsoft YaHei',sans-serif;transition:all 0.15s;
+  }
+  .ai-card .ai-use-btn:hover{background:#E8B830;border-color:#E8B830}
+  .ai-card.editing{background:#FFF;border-color:#E8B830;border-width:2px}
+  .ai-card.editing .ai-card-view{display:none}
+  .ai-card.editing .ai-card-edit{display:block}
+  .ai-card .ai-card-edit{display:none}
+  .ai-card .ai-card-edit .edit-area{
+    width:100%;min-height:120px;max-height:240px;overflow-y:auto;margin:6px 0;padding:8px;
+    border:1px solid #C8B090;background:#FFFDF5;
+    font-family:'Microsoft YaHei',sans-serif;font-size:11px;
+    line-height:1.7;color:#2A1808;outline:none;resize:vertical;
+    white-space:pre-wrap;word-break:break-word;
+  }
+  .ai-card .ai-card-edit .edit-area:focus{border-color:#E8B830}
+  .ai-card .ai-card-edit .edit-area .edit-title{font-size:13px;font-weight:700;color:#2A1808;margin-bottom:4px}
+  .ai-card .ai-card-edit .edit-area .edit-original{color:#999;font-size:11px}
+  .ai-card .ai-card-edit .edit-area .edit-original em{font-style:italic}
+  .ai-card .ai-card-edit .edit-area .edit-cursor{color:#2A1808;font-size:11px}
+  .ai-card .ai-card-edit .edit-hint{font-size:9px;color:#8B6B4A;margin-bottom:4px}
+  .ai-card .ai-card-edit .edit-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:4px}
+  .ai-card .ai-card-edit .edit-actions button{
+    padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer;
+    font-family:'Microsoft YaHei',sans-serif;border:1px solid;transition:all 0.15s;
+  }
+  .ai-card .ai-card-edit .edit-cancel{background:#E8D5B0;border-color:#8B6B4A;color:#2A1808}
+  .ai-card .ai-card-edit .edit-cancel:hover{background:#C8B090}
+  .ai-card .ai-card-edit .edit-send{background:#E8B830;border-color:#E8B830;color:#2A1808}
+  .ai-card .ai-card-edit .edit-send:hover{background:#FFD84D}
+
+  /* ═══ AI Writing Assistant Panel ═══ */
+  #ai-suggest{
+    display:none;position:absolute;bottom:68px;left:14px;right:14px;z-index:15;
+    background:#FFFDF5;border:2px solid #E8B830;padding:0;font-size:11px;
+    line-height:1.5;color:#2A1808;box-shadow:0 -2px 8px rgba(0,0,0,0.12);
+    animation:fIn .2s ease;max-height:55vh;overflow-y:auto;
+  }
+  #ai-suggest::-webkit-scrollbar{width:6px}
+  #ai-suggest::-webkit-scrollbar-thumb{background:#C8B090;border-radius:3px}
+  .ai-sug-hdr{font-weight:700;color:#E8B830;font-size:10px;padding:8px 12px;background:#3E2210;position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;align-items:center}
+  .ai-sug-hdr span{cursor:pointer;font-size:12px;padding:0 2px}
+  .ai-sug-hdr span:hover{color:#FFD84D}
+  .ai-sug-section{padding:8px 12px;border-bottom:1px solid #E8D5B0}
+  .ai-sug-section:last-child{border-bottom:none}
+  .ai-sug-section .section-title{font-weight:700;font-size:10px;color:#B8901E;margin-bottom:4px}
+  .ai-sug-section ul{margin:4px 0;padding-left:16px}
+  .ai-sug-section li{margin-bottom:3px;font-size:11px;line-height:1.5}
+  .ai-sug-section li.kb{color:#2B5E3A;font-weight:700}
+  .ai-sug-section .struct-box{background:#F0E8D0;border:1px solid #D8C8A0;padding:8px 10px;margin-top:4px;font-size:10px;line-height:1.7}
+  .ai-sug-section .struct-box .struct-label{font-weight:700;color:#5C4033}
+  .ai-sug-section .struct-box .struct-point{color:#264653;margin-left:8px}
+  .ai-sug-section .struct-box .struct-data{color:#2B5E3A;font-weight:700;font-size:9px;margin-left:8px}
+  .ai-sug-actions{padding:8px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:1px solid #E8D5B0}
+  .ai-sug-actions button{
+    font-size:10px;padding:4px 10px;border:1px solid #8B6B4A;background:#E8D5B0;color:#2A1808;
+    cursor:pointer;font-family:'Microsoft YaHei',sans-serif;font-weight:700;
+  }
+  .ai-sug-actions button.primary{background:#E8B830;border-color:#E8B830}
+  .ai-sug-actions button:hover{opacity:0.85}
+
+  /* ═══ AI Fallback Message ═══ */
+  .msg.ai-fallback{align-self:stretch;max-width:100%}
+  .msg.ai-fallback .nm{color:#B8901E}
+  .msg.ai-fallback .nm::before{background:#E8B830 !important}
+  .msg.ai-fallback .bb{
+    background:#FFFDF5;color:#2A1808;border:2px dashed #E8B830;border-radius:2px;
+    font-size:11px;padding:8px 12px;
+  }
+  .msg.ai-fallback .fb-hdr{font-weight:700;color:#B8901E;font-size:11px;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+  .msg.ai-fallback .fb-toggle{
+    font-size:10px;color:#8B6B4A;cursor:pointer;margin-top:6px;text-decoration:underline;
+  }
+  .msg.ai-fallback .fb-toggle:hover{color:#E8B830}
+  .msg.ai-fallback .fb-body{margin-top:6px}
+  .msg.ai-fallback.collapsed .fb-body{display:none}
+  .msg.ai-fallback .fb-item{
+    margin-bottom:6px;cursor:pointer;padding:4px 6px;border-radius:2px;transition:background 0.15s;
+  }
+  .msg.ai-fallback .fb-item:hover{background:rgba(232,184,48,0.1)}
+  .msg.ai-fallback .fb-item strong{color:#B8901E;border-bottom:1px dashed #B8901E}
+  .msg.ai-fallback .fb-item .fb-peek{font-size:10px;color:#5C4033;margin-top:2px}
+  .msg.ai-fallback .fb-detail{
+    display:none;margin:6px 0 10px;padding:10px 12px;background:#FFF;
+    border:1px solid #E8B830;border-left:3px solid #E8B830;font-size:11px;line-height:1.6;
+    animation:fIn .2s ease;
+  }
+  .msg.ai-fallback .fb-detail.show{display:block}
+  .msg.ai-fallback .fb-detail .fd-title{font-weight:700;font-size:12px;color:#2A1808;margin-bottom:6px}
+  .msg.ai-fallback .fb-detail .fd-tag{display:inline-block;background:#E8B830;color:#2A1808;font-size:9px;padding:1px 6px;margin-right:4px;font-weight:700}
+  .msg.ai-fallback .fb-detail .fd-points{margin:6px 0;padding-left:14px}
+  .msg.ai-fallback .fb-detail .fd-points li{margin-bottom:3px;font-size:10px}
+  .msg.ai-fallback .fb-detail .fd-quote{font-size:10px;color:#5C4033;border-left:2px solid #C8B090;padding-left:8px;margin:6px 0;font-style:italic}
+  .msg.ai-fallback .fb-detail .fd-data{display:inline-block;background:#2B5E3A;color:#FFF;font-size:9px;padding:1px 6px;margin-top:4px;font-weight:700}
+  .msg.ai-fallback .fb-detail .fd-src{font-size:9px;color:#8B6B4A;margin-top:6px}
+  .msg.ai-fallback .fb-detail .fd-close{font-size:10px;color:#8B6B4A;cursor:pointer;text-decoration:underline;margin-top:6px;display:inline-block}
+  .msg.ai-fallback .fb-detail .fd-close:hover{color:#E8B830}
+
+  /* ═══ Insight Card ═══ */
+  #insight-card{
+    display:none;margin:12px;padding:0;border:2px solid #E8B830;background:#FFFDF5;
+    animation:fIn .4s ease;
+  }
+  #insight-card.show{display:block}
+  #insight-hdr{
+    padding:8px 12px;background:#3E2210;color:#E8B830;font-size:12px;font-weight:700;
+    display:flex;align-items:center;gap:6px;
+  }
+  #insight-body{padding:10px 12px;font-size:11px;line-height:1.7;color:#2A1808}
+  #insight-body .ins-section{margin-bottom:8px}
+  #insight-body .ins-label{font-weight:700;color:#2B5E3A;font-size:10px;margin-bottom:2px}
+  #insight-body .ins-people{font-size:9px;color:#8B6B4A;margin-top:8px;padding-top:6px;border-top:1px solid #E8D5B0}
+
+  /* ═══ AI Proactive Question ═══ */
+  .msg.ai-question{align-self:stretch;max-width:100%}
+  .msg.ai-question .nm{color:#B8901E}
+  .msg.ai-question .nm::before{background:#E8B830 !important}
+  .msg.ai-question .bb{
+    background:#FFFDF5;color:#2A1808;border:2px solid #E8B830;border-radius:2px;
+    font-size:12px;padding:10px 12px;line-height:1.6;
+  }
+  .msg.ai-question .aq-label{font-size:9px;color:#B8901E;font-weight:700;margin-bottom:4px}
+  .msg.ai-question .aq-context{font-size:9px;color:#8B6B4A;margin-top:6px;font-style:italic}
+</style>
+</head>
+<body>
+<div id="container">
+<div id="scene">
+  <canvas id="c"></canvas>
+  <button id="back" onclick="history.back()">← 返回沙龙</button>
+  <div id="char-profile">
+    <div class="cp-hdr">
+      <span class="cp-name" id="cp-name"></span>
+      <span class="cp-close" onclick="closeProfile()">✕</span>
+    </div>
+    <div id="cp-body"></div>
+  </div>
+</div>
+<div id="chat">
+  <div id="chat-hdr">讨论中</div>
+  <div id="msgs"></div>
+  <div id="typing"></div>
+
+  <!-- AI Material Sidebar (overlays chat area) -->
+  <div id="ai-sidebar">
+    <div id="ai-panel">
+      <div id="ai-panel-hdr">
+        <div>💡 AI 素材参考 · 点击卡片可引用编辑</div>
+        <span id="ai-close" title="关闭">✕</span>
+      </div>
+      <div id="ai-materials"></div>
+    </div>
+  </div>
+
+  <!-- AI Writing Assistant Panel -->
+  <div id="ai-suggest">
+    <div id="ai-sug-text"></div>
+  </div>
+
+  <div id="inp-wrap">
+    <div id="mi-rich" contenteditable="true" data-placeholder="第一行为观点标题（加粗），Shift+Enter换行写正文，Enter发送"></div>
+    <button id="ai-assist-btn" onclick="toggleAISuggest()" title="AI 写作助手">💡</button>
+    <button id="invite-btn" onclick="toggleInvitePanel()" title="邀请同事参与">@</button>
+    <button onclick="send()">发 言</button>
+  </div>
+
+  <!-- Invite Panel -->
+  <div id="invite-panel" style="display:none;position:absolute;bottom:72px;right:14px;z-index:16;background:#FFF;border:1px solid #C8D0D8;padding:0;width:200px;box-shadow:0 2px 8px rgba(0,40,80,0.1);animation:fIn .2s ease;border-radius:3px">
+    <div style="padding:8px 10px;background:#4A7BA8;color:#FFF;font-size:11px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-radius:3px 3px 0 0">
+      <span>@ 邀请同事参与</span><span style="cursor:pointer" onclick="toggleInvitePanel()">✕</span>
+    </div>
+    <div id="invite-list" style="padding:6px"></div>
+  </div>
+
+  <!-- Insight Card (appended at bottom of chat) -->
+  <div id="insight-card">
+    <div id="insight-hdr">📋 设计洞察卡 · AI整理</div>
+    <div id="insight-body"></div>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  Canvas Scene (same as v4, compact)
+// ═══════════════════════════════════════
+const W=384,H=720,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+function sz(){const s=Math.min(scene.clientWidth/W,scene.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
+window.addEventListener('resize',sz);sz();
+function R(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(x|0,y|0,w|0,h|0)}
+const P={
+  bg:'#F0F4F8',wallTop:'#E8EEF4',wallBot:'#D8E0E8',floor:'#F5E6C8',floorB:'#EDD8B8',floorLine:'#D4C4A8',
+  wd:'#C89050',wdL:'#D8A060',wdD:'#A87040',
+  green:'#5CB85C',greenD:'#4A9B4A',
+  blue:'#4A8BC8',blueD:'#2868A0',
+  orange:'#F0A030',orangeD:'#D08820',
+  red:'#E05050',purple:'#8B6BB8',
+  ink:'#2D3748',inkL:'#4A5568',
+  paper:'#FFFFFF',panelBorder:'#C8D0D8',
+  shadow:'rgba(0,40,80,0.06)',warm:'rgba(74,139,200,',
+  skin:'#FFD8B0',
+  gold:'#F0A030',goldL:'#FFBB55',goldD:'#D08820',
+  fire1:'#F0A030',fire2:'#FFBB55',fire3:'#FFD84D',
+};
+const charColors=[
+  {name:'阿哲',sx:'#FFD8B0',hair:'#3A2A1A',top:'#4488CC',bot:'#446'},
+  {name:'小棠',sx:'#FFD8B0',hair:'#6B3A1A',top:'#DD5555',bot:'#446'},
+  {name:'青叶',sx:'#FFD8B0',hair:'#1A2A4E',top:'#55AA66',bot:'#446'},
+  {name:'言午',sx:'#FFD8B0',hair:'#4A3A2A',top:'#EE9933',bot:'#446'},
+  {name:'蓝山',sx:'#FFD8B0',hair:'#2A1A1A',top:'#8866AA',bot:'#446'},
+];
+let frame=0,active=-1;
+
+function drawChar(cx,cy,ci,act,f){
+  const s=1.3;// scale for 30% scene
+  const dy=act?-Math.abs(Math.sin(f*0.12))*2:0;
+  ctx.save();
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.06)';ctx.beginPath();ctx.ellipse(cx,cy+10*s,8*s,3*s,0,0,Math.PI*2);ctx.fill();
+  // Legs
+  R(cx-4*s,cy+4*s+dy,3*s,8*s,ci.bot);R(cx+1*s,cy+4*s+dy,3*s,8*s,ci.bot);
+  // Body
+  R(cx-5*s,cy-4*s+dy,10*s,9*s,ci.top);
+  // Arms
+  R(cx-7*s,cy-3*s+dy,3*s,7*s,ci.top);R(cx+4*s,cy-3*s+dy,3*s,7*s,ci.top);
+  // Head (big, Kairosoft style)
+  R(cx-7*s,cy-16*s+dy,14*s,13*s,ci.sx);
+  // Hair
+  R(cx-7*s,cy-18*s+dy,14*s,6*s,ci.hair);R(cx-7*s,cy-13*s+dy,3*s,3*s,ci.hair);R(cx+4*s,cy-13*s+dy,3*s,3*s,ci.hair);
+  // Eyes (dots)
+  R(cx-3*s,cy-10*s+dy,2*s,2*s,'#222');R(cx+1*s,cy-10*s+dy,2*s,2*s,'#222');
+  // Mouth
+  R(cx-1*s,cy-6*s+dy,2*s,1*s,'#CC8888');
+  // Blink
+  if(Math.floor(f/180)%5===0&&f%180<3){R(cx-3*s,cy-10*s+dy,2*s,2*s,ci.sx);R(cx+1*s,cy-10*s+dy,2*s,2*s,ci.sx)}
+  // Active glow
+  if(act){
+    const ga=0.4+Math.sin(f*0.08)*0.2;
+    ctx.strokeStyle=`rgba(74,136,204,${ga})`;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(cx-9*s,cy-20*s+dy,18*s,32*s,2);ctx.stroke();
+  }
+  // Name
+  ctx.fillStyle=P.ink;ctx.font='bold 8px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(ci.name,cx,cy+14*s);ctx.textAlign='start';
+  ctx.restore();
+}
+
+// ═══ Anime-style Lightbulb Indicator ═══
+// Lifecycle: pop-in (10 frames) → glow (150 frames ~2.5s) → fade-out (30 frames)
+let bulbState='idle',bulbTimer=0,bulbCharIdx=-1,lastActive=-1;
+const BULB_POPIN=10,BULB_HOLD=150,BULB_FADEOUT=30;
+
+function drawBulbIndicator(f){
+  // Detect active change → trigger new bulb
+  if(active!==lastActive){
+    lastActive=active;
+    if(active>=0){bulbState='popin';bulbTimer=0;bulbCharIdx=active}
+  }
+  if(bulbState==='idle'||bulbCharIdx<0)return;
+  
+  bulbTimer++;
+  let alpha=1,scale=1;
+  
+  if(bulbState==='popin'){
+    // Bounce-in: overshoot then settle
+    const t=bulbTimer/BULB_POPIN;
+    scale=t<0.6?t*1.8:1.2-((t-0.6)/0.4)*0.2; // overshoot to 1.2 then back to 1.0
+    alpha=t;
+    if(bulbTimer>=BULB_POPIN){bulbState='hold';bulbTimer=0}
+  }else if(bulbState==='hold'){
+    scale=1;alpha=1;
+    if(bulbTimer>=BULB_HOLD){bulbState='fadeout';bulbTimer=0}
+  }else if(bulbState==='fadeout'){
+    scale=1-bulbTimer/BULB_FADEOUT*0.3;
+    alpha=1-bulbTimer/BULB_FADEOUT;
+    if(bulbTimer>=BULB_FADEOUT){bulbState='idle';return}
+  }
+  
+  const pos=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
+  const bx=pos[bulbCharIdx].x,by=pos[bulbCharIdx].y-30;
+  
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  ctx.translate(bx,by);
+  ctx.scale(scale,scale);
+  
+  // Lightbulb (16x22 pixels, drawn centered at 0,0)
+  const gold=P.gold,goldL='#FFD84D',goldD='#B8901E',white='#FFFDE0';
+  // Bulb glass
+  R(-5,-11,10,4,goldL);    // top curve
+  R(-7,-7,14,8,goldL);     // main bulb
+  R(-6,-9,12,2,white);     // highlight
+  // Inner glow pulse
+  const innerGlow=0.4+Math.sin(f*0.1)*0.15;
+  R(-4,-7,8,5,`rgba(255,255,220,${innerGlow})`);
+  // Base/screw
+  R(-4,1,8,3,goldD);
+  R(-3,4,6,2,'#8B6B14');
+  R(-4,6,8,3,goldD);
+  
+  // Pop-in radiating lines (only during popin + first 20 frames of hold)
+  if(bulbState==='popin'||(bulbState==='hold'&&bulbTimer<20)){
+    const lineAlpha=bulbState==='popin'?alpha:1-bulbTimer/20;
+    ctx.strokeStyle=`rgba(255,216,77,${lineAlpha*0.8})`;
+    ctx.lineWidth=2;
+    const rays=6;
+    for(let r=0;r<rays;r++){
+      const angle=(r/rays)*Math.PI*2-Math.PI/2;
+      const inner=12,outer=18+Math.sin(f*0.2+r)*2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle)*inner,Math.sin(angle)*inner-4);
+      ctx.lineTo(Math.cos(angle)*outer,Math.sin(angle)*outer-4);
+      ctx.stroke();
+    }
+  }
+  
+  ctx.restore();
+}
+
+function drawScene(f){
+  // Room - Game Dev Story bright office (384px wide)
+  R(0,0,W,220,P.wallTop);R(0,200,W,20,P.wallBot);R(0,218,W,4,'#C0C8D0');
+  // Floor
+  R(0,222,W,H-222,P.floor);
+  for(let y=222;y<H;y+=24){const off=(Math.floor((y-222)/24)%2)*36;for(let x=off;x<W;x+=72){R(x,y,72,24,((x+y)%144<72)?P.floorB:P.floor);R(x,y+22,72,2,P.floorLine)}}
+  // Window (daytime, bright)
+  const wx=100,wy=30,ww=180,wh=140;
+  R(wx-4,wy-4,ww+8,wh+8,'#C0C8D0');R(wx,wy,ww,wh,'#B8E0F8');
+  R(wx,wy,ww,wh/2,'#88C8E8');R(wx,wy+wh/2,ww,wh/2,'#A0D8F0');
+  // Clouds
+  ctx.fillStyle='#FFF';ctx.beginPath();ctx.arc(wx+40,wy+30,14,0,Math.PI*2);ctx.arc(wx+55,wy+26,10,0,Math.PI*2);ctx.arc(wx+65,wy+32,8,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(wx+120,wy+44,10,0,Math.PI*2);ctx.arc(wx+132,wy+40,8,0,Math.PI*2);ctx.fill();
+  R(wx+ww/2-1,wy,3,wh,'#C0C8D0');R(wx,wy+wh/2-1,ww,3,'#C0C8D0');
+  // Whiteboard on wall
+  R(10,40,80,56,'#FFF');ctx.strokeStyle='#C0C8D0';ctx.lineWidth=1;ctx.strokeRect(10,40,80,56);
+  R(10,40,80,4,P.blue);
+  R(18,52,30,2,P.blue);R(18,60,50,2,P.green);R(18,68,24,2,P.orange);R(18,76,40,2,P.red);
+  // Desks
+  R(60,360,56,22,P.wdD);R(62,362,52,18,P.wd);R(62,362,52,3,P.wdL);R(64,380,4,10,P.wdD);R(110,380,4,10,P.wdD);
+  R(68,356,14,6,'#E0E0E0');R(70,350,10,6,'#D0D8E0');// monitor
+  R(250,340,56,22,P.wdD);R(252,342,52,18,P.wd);R(252,342,52,3,P.wdL);R(254,360,4,10,P.wdD);R(300,360,4,10,P.wdD);
+  R(258,336,14,6,'#E0E0E0');R(260,330,10,6,'#D0D8E0');
+  // Bookshelf
+  R(340,240,36,100,'#D8C8A8');R(342,242,32,96,'#E8D8C0');
+  for(let sy2=250;sy2<330;sy2+=22){R(342,sy2,32,2,'#C8B898');const bkCols=['#E05050','#4A8BC8','#5CB85C','#F0A030','#8B6BB8'];let bx2=345;while(bx2<370){const bw2=3+((bx2+sy2)%3),bh2=6+((bx2*7+sy2)%7);R(bx2,sy2+22-bh2,bw2,bh2,bkCols[(bx2+sy2)%5]);bx2+=bw2+1}}
+  // Plant
+  R(14,320,12,10,'#C87840');R(16,316,8,5,'#A86830');
+  R(14,302,4,14,'#48B868');R(18,298,4,16,'#38A858');R(22,304,3,10,'#68D080');R(16,296,5,5,'#5CB85C');
+  // Coffee machine
+  R(340,350,16,22,'#4A4A4A');R(342,352,12,14,'#333');R(344,356,8,6,'#6B3300');R(344,368,6,4,'#FFF');
+  // Characters
+  const positions=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
+  charColors.forEach((ci,i)=>{
+    const isActive=i===active;
+    const actBob=isActive?Math.sin(frame*0.12)*2:0;
+    drawChar(positions[i].x,positions[i].y+actBob,ci,isActive,f);
+    if(isActive){
+      const cx2=positions[i].x,cy2=positions[i].y+actBob;
+      const glowAlpha=0.4+Math.sin(f*0.08)*0.2;
+      ctx.strokeStyle=`rgba(74,139,200,${glowAlpha})`;ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(cx2-16,cy2-70,32,72,3);ctx.stroke();
+    }
+  });
+  drawBulbIndicator(f);
+  // Topic bar at bottom
+  const topic=params.get('topic')||'知识讨论';
+  R(0,H-32,W,32,'rgba(255,255,255,0.9)');R(0,H-32,W,2,'#C8D0D8');
+  ctx.fillStyle=P.ink;ctx.font='bold 11px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(topic,W/2,H-12);ctx.textAlign='start';
+}
+
+// ═══════════════════════════════════════
+//  Chat Logic
+// ═══════════════════════════════════════
+const params=new URLSearchParams(window.location.search);
+const topicTitle=params.get('topic')||'知识讨论';
+document.getElementById('chat-hdr').textContent='讨论: '+topicTitle;
+const msgsEl=document.getElementById('msgs'),typing=document.getElementById('typing'),mi=document.getElementById('mi-rich');
+
+function now(){const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')}
+function addMsg(n,t,isSelf,extra){
+  const d=document.createElement('div');
+  d.className='msg '+(isSelf?'self':'other')+(extra||'');
+  if(!isSelf)d.setAttribute('data-char',n);
+  d.innerHTML=`<div class="nm">${isSelf?'你':n}</div><div class="bb">${t}</div><div class="tm">${now()}</div>`;
+  msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+}
+
+const seed=[
+  {n:'阿哲',t:'我觉得关键还是底层玩法要够好，抽签只是放大器，不能指望它救一个本身不好玩的玩法。'},
+  {n:'小棠',t:'同意。之前我们项目踩过坑，加了一堆随机BUFF玩家完全不买账，数据跟老玩法差不多。'},
+  {n:'青叶',t:'但PVE里面可以放开手脚做——我们《星渊纪元》在PVE模式里直接把数值上限放开了5倍，玩家爽感评分涨了一大截。'},
+  {n:'言午',t:'角色适配这块工作量真的很容易爆炸。《星渊纪元》40多个角色每个都得单独设计流派，后来搞了通用流派才解决。'},
+  {n:'蓝山',t:'对，通用流派反而成了玩家讨论的热点话题，意外收获。这个经验值得参考。'},
+];
+let si=0,msgCount=0,fallbackShown=false,insightShown=false;
+
+function playSeed(){
+  if(si>=seed.length)return;
+  const s=seed[si];
+  typing.textContent=s.n+' 正在输入…';
+  setTimeout(()=>{
+    typing.textContent='';addMsg(s.n,s.t);active=si;msgCount++;si++;
+    if(si<seed.length)setTimeout(playSeed,1200+Math.random()*800);
+    else setTimeout(()=>{active=-1;postSeedAIQuestion()},2000);
+  },600+Math.random()*400);
+}
+setTimeout(playSeed,800);
+
+// ═══════════════════════════════════════
+//  FEATURE 1: AI Writing Assistant (常驻按钮)
+// ═══════════════════════════════════════
+let sugVisible=false;
+
+function analyzeInput(text){
+  const t=text.trim();
+  // Section 1: Writing tips
+  const tips=[];
+  if(!t){
+    tips.push('补充你的项目背景或具体场景，其他人更容易给出针对性建议');
+    tips.push('如果是提问，描述你目前尝试过的方案和遇到的问题');
+    tips.push('如果是观点，附上支撑的数据或案例会更有说服力');
+  } else {
+    if(t.length<15) tips.push('当前内容较短，补充具体场景或案例会让讨论更聚焦');
+    if(!t.match(/[。！？，、]/)) tips.push('可以分点阐述，让观点结构更清晰');
+    if(t.match(/怎么|如何|咋/)) tips.push('提问时补充品类、目标用户、当前阶段等上下文');
+    if(t.match(/好不好|行不行|能不能/)) tips.push('拆解为具体维度（留存、付费、体验），讨论更深入');
+    if(t.match(/为什么|为啥/)) tips.push('附上你观察到的具体现象或数据');
+    if(t.match(/我觉得|我认为|个人感觉/)) tips.push('补充支撑的案例或数据会更有说服力');
+    if(t.match(/不同意|反对|但是/)) tips.push('说明基于什么经验得出的不同结论，比单纯否定更有建设性');
+    if(tips.length===0) tips.push('当前内容表述清晰，可以直接发送');
+  }
+
+  // Section 2: Structure scaffold + supporting data
+  let scaffold=null;
+  if(t.length>=4){
+    scaffold={thesis:'',angles:[],data:[]};
+    // Extract thesis
+    if(t.match(/我觉得|我认为|个人感觉/)){
+      scaffold.thesis=t.replace(/^.*(我觉得|我认为|个人感觉)/,'').slice(0,30);
+    } else if(t.length>=6){
+      scaffold.thesis=t.slice(0,30)+(t.length>30?'…':'');
+    }
+    // Suggest expansion angles based on content
+    if(t.match(/通用流派|流派/)){
+      scaffold.angles=['工作量对比：专属 vs 通用的人力成本差异','玩家反馈：社区讨论活跃度和UGC产出变化','适用场景：什么品类/阶段适合通用流派'];
+      scaffold.data=['通用流派工作量: 0.5人周/角色 vs 专属: 3人周/角色','《星渊纪元》切换后社区讨论量 +40%'];
+    } else if(t.match(/数值|PVE|爽感/)){
+      scaffold.angles=['数值策略：放大倍率的合理区间','体验验证：玩家爽感评分的变化','风险控制：对PVP平衡和长期留存的影响'];
+      scaffold.data=['《星渊纪元》PVE爽感评分: 3.2→4.6','7日留存 +12% / 首月付费 +18%'];
+    } else if(t.match(/随机|抽签|Roguelike|rogue/i)){
+      scaffold.angles=['前提条件：底层玩法质量的要求','应用场景：PVE vs PVP的策略差异','设计边界：随机性的"可控度"和"影响范围"'];
+      scaffold.data=['38%头部产品尝试Roguelike融合，留存显著提升仅12%','成功案例共性：随机性限定在"构建"阶段'];
+    } else if(t.match(/角色|适配|工作量/)){
+      scaffold.angles=['量产效率：不同方案的人力投入对比','质量把控：如何在效率和精度间取舍','玩家感知：玩家真的需要角色专属设计吗'];
+      scaffold.data=['40角色专属→120人周 vs 通用流派→20人周'];
+    } else {
+      scaffold.angles=['支撑案例：有没有类似的项目经验','数据验证：能否量化这个判断','适用边界：什么情况下这个观点成立/不成立'];
+      scaffold.data=[];
+    }
+  }
+
+  // Section 3: KB hints
+  const kbHints=[];
+  if(t.match(/随机|抽签|Roguelike|rogue/i)) kbHints.push('有3条关于"抽签玩法"的过往讨论');
+  if(t.match(/数值|爽感|PVE/i)) kbHints.push('项目B"PVE数值放大"复盘数据');
+  if(t.match(/流派|角色|适配/)) kbHints.push('言午的通用流派实践经验');
+  if(t.match(/留存|付费|商业化/)) kbHints.push('行业Roguelike融合品类趋势报告');
+
+  return {tips,scaffold,kbHints};
+}
+
+function buildSuggestHTML(result){
+  let html=`<div class="ai-sug-hdr"><span>💡 AI 写作助手</span><span onclick="toggleAISuggest()">✕</span></div>`;
+
+  // Section 1: Tips
+  html+='<div class="ai-sug-section"><div class="section-title">📝 写作建议</div><ul>';
+  result.tips.forEach(t=>html+=`<li>${t}</li>`);
+  html+='</ul></div>';
+
+  // Section 2: Structure scaffold
+  if(result.scaffold){
+    html+='<div class="ai-sug-section"><div class="section-title">🏗️ 结构化辅助 · 展开框架</div>';
+    html+='<div class="struct-box">';
+    if(result.scaffold.thesis) html+=`<div><span class="struct-label">核心论点：</span>${result.scaffold.thesis}</div>`;
+    html+='<div style="margin-top:4px"><span class="struct-label">建议展开角度：</span></div>';
+    result.scaffold.angles.forEach((a,i)=>html+=`<div class="struct-point">  ${i+1}. ${a}</div>`);
+    if(result.scaffold.data.length>0){
+      html+='<div style="margin-top:4px"><span class="struct-label">可引用数据：</span></div>';
+      result.scaffold.data.forEach(d=>html+=`<div class="struct-data">  📊 ${d}</div>`);
+    }
+    html+='</div></div>';
+  }
+
+  // Section 3: KB links
+  if(result.kbHints.length>0){
+    html+='<div class="ai-sug-section"><div class="section-title">📚 知识库关联</div><ul>';
+    result.kbHints.forEach(h=>html+=`<li class="kb">${h}</li>`);
+    html+='</ul></div>';
+  }
+
+  // Actions
+  html+='<div class="ai-sug-actions"><button onclick="openMaterialsFromBtn()">📎 查看完整素材</button></div>';
+  return html;
+}
+
+function toggleAISuggest(){
+  const panel=document.getElementById('ai-suggest');
+  const btn=document.getElementById('ai-assist-btn');
+  if(sugVisible){
+    panel.style.display='none';btn.classList.remove('active');sugVisible=false;return;
+  }
+  document.getElementById('ai-sug-text').innerHTML=buildSuggestHTML(analyzeInput(mi.textContent));
+  panel.style.display='block';btn.classList.add('active');sugVisible=true;
+}
+
+function openMaterialsFromBtn(){
+  toggleAISuggest();
+  showAIMaterials();
+}
+
+// 输入内容变化时，如果建议面板已打开则实时刷新
+mi.addEventListener('input',()=>{
+  if(!sugVisible)return;
+  document.getElementById('ai-sug-text').innerHTML=buildSuggestHTML(analyzeInput(mi.textContent));
+});
+
+// ═══════════════════════════════════════
+//  FEATURE 2: AI Material Sidebar
+// ═══════════════════════════════════════
+const aiMaterials=[
+  {
+    tag:'相关讨论',
+    title:'抽签玩法融合的成与败',
+    src:'3个月前 · 阿哲、白露等5人参与 · 12条回复',
+    summary:'团队围绕"随机机制在不同品类中的效果差异"展开了深入讨论。',
+    points:['底层玩法质量是前提，抽签只能放大已有乐趣而非创造新乐趣','通用流派比角色专属流派更适合中小团队（工作量减少约60%）','PVE和PVP场景下的策略需要分开设计，不能一套打天下'],
+    quote:'阿哲: "我们试过给20个角色各做专属流派，最后砍到5个通用流派，反而留存涨了8%"',
+    relevance:'高',
+  },
+  {
+    tag:'项目案例',
+    title:'《星渊纪元》PVE 数值放大策略',
+    src:'项目B复盘文档 · 2024.11 · 已验证',
+    summary:'《星渊纪元》在PVE模式下采用数值放大策略，取得了显著的体验提升效果。',
+    points:['PVE模式放开数值上限，伤害倍率最高放大到常规的5倍','玩家"爽感"评分从3.2提升到4.6（5分制）','但需要隔离PVP数值体系，否则会严重破坏竞技平衡','关键设计点：让玩家"感觉"自己变强，而非单纯数字膨胀'],
+    data:'留存: +12% (7日) / 付费: +18% (首月)',
+    relevance:'高',
+  },
+  {
+    tag:'行业参考',
+    title:'2024 Roguelike融合品类趋势报告',
+    src:'行业分析 · 2024 Q3 · 来源: 内部研究院',
+    summary:'头部产品中Roguelike要素融合已成趋势，但成功率并不高，需要精准定位。',
+    points:['38%的头部产品尝试了抽签/Roguelike要素融合','留存提升显著的仅占12%，大部分效果平平','成功案例的共性：将随机性限定在"构建"阶段而非"执行"阶段','失败案例的共性：随机性过强导致玩家丧失掌控感'],
+    data:'样本量: 86款产品 / 统计周期: 2023.Q3-2024.Q3',
+    relevance:'中',
+  },
+  {
+    tag:'相关讨论',
+    title:'角色适配工作量控制',
+    src:'2个月前 · 言午、蓝山等4人参与 · 8条回复',
+    summary:'讨论了角色个性化设计与量产效率之间的平衡方案。',
+    points:['单角色全定制流派：平均3人周/角色，10角色=30人周','通用流派+角色微调：平均0.5人周/角色，10角色=5人周','通用流派意外成为玩家社区讨论的热点话题，UGC内容增加40%'],
+    quote:'言午: "通用流派不是偷懒，是给玩家留了自己组合搭配的空间"',
+    relevance:'中',
+  },
+  {
+    tag:'设计文档',
+    title:'随机性设计的四象限模型',
+    src:'设计规范库 · 白露撰写 · 2024.08',
+    summary:'将随机性按"玩家可控度"和"影响范围"两个维度划分为四个象限，指导不同场景下的随机机制选择。',
+    points:['高可控+小范围: 装备词缀（最安全，推荐新手向产品）','高可控+大范围: 流派构建（核心Roguelike体验）','低可控+小范围: 战斗暴击（调味品，不宜过度依赖）','低可控+大范围: 地图生成（高风险高回报，需强力兜底机制）'],
+    relevance:'高',
+  },
+];
+
+let sidebarShown=false;
+document.getElementById('ai-close').addEventListener('click',()=>{
+  document.getElementById('ai-sidebar').classList.remove('show');
+});
+
+function showAIMaterials(){
+  const container=document.getElementById('ai-materials');
+  container.innerHTML='';
+  aiMaterials.forEach((m,idx)=>{
+    const card=document.createElement('div');card.className='ai-card';card.id='ai-card-'+idx;
+    // View mode
+    let viewHtml='<div class="ai-card-view">';
+    viewHtml+=`<span class="ai-tag">${m.tag}</span>`;
+    if(m.relevance)viewHtml+=`<span class="ai-relevance">相关度: ${m.relevance}</span>`;
+    viewHtml+=`<div class="ai-title">${m.title}</div>`;
+    viewHtml+=`<div class="ai-summary">${m.summary}</div>`;
+    if(m.points&&m.points.length){
+      viewHtml+='<ul class="ai-points">';
+      m.points.forEach(p=>viewHtml+=`<li>${p}</li>`);
+      viewHtml+='</ul>';
+    }
+    if(m.quote)viewHtml+=`<div class="ai-quote">${m.quote}</div>`;
+    if(m.data)viewHtml+=`<div><span class="ai-data">📊 ${m.data}</span></div>`;
+    viewHtml+=`<div class="ai-src">📎 ${m.src}</div>`;
+    viewHtml+=`<div class="ai-use-btn" onclick="startEditCard(${idx})">✏️ 引用编辑</div>`;
+    viewHtml+='</div>';
+    // Edit mode
+    viewHtml+=`<div class="ai-card-edit">
+      <div class="edit-hint">灰色为原文引用，直接输入即为黑色新内容。发送时统一为纯文本。</div>
+      <div class="edit-area" contenteditable="true" id="ai-card-edit-${idx}"></div>
+      <div class="edit-actions">
+        <button class="edit-cancel" onclick="cancelEditCard(${idx})">取消</button>
+        <button class="edit-send" onclick="sendEditCard(${idx})">发送</button>
+      </div>
+    </div>`;
+    card.innerHTML=viewHtml;
+    container.appendChild(card);
+  });
+  document.getElementById('ai-sidebar').classList.add('show');
+}
+
+// ═══ Inline Card Edit ═══
+function buildEditorHTML(m){
+  let html='';
+  // Title line: bold, larger, black
+  html+=`<div class="edit-title">【${m.tag}】${m.title}</div>`;
+  // Original content: gray
+  html+=`<div class="edit-original">`;
+  html+=m.summary+'<br>';
+  if(m.points&&m.points.length){
+    html+='<br>';
+    html+=m.points.map((p,i)=>`${i+1}. ${p}`).join('<br>');
+  }
+  if(m.data) html+=`<br><br>📊 ${m.data}`;
+  if(m.quote) html+=`<br><br><em>引用：${m.quote}</em>`;
+  html+=`</div>`;
+  // Cursor zone for new input
+  html+=`<div class="edit-cursor"><br></div>`;
+  return html;
+}
+
+function startEditCard(idx){
+  // Close any other editing card
+  document.querySelectorAll('.ai-card.editing').forEach(c=>c.classList.remove('editing'));
+  const card=document.getElementById('ai-card-'+idx);
+  card.classList.add('editing');
+  const editArea=document.getElementById('ai-card-edit-'+idx);
+  editArea.innerHTML=buildEditorHTML(aiMaterials[idx]);
+  // Place cursor at the end (in the edit-cursor div)
+  setTimeout(()=>{
+    editArea.focus();
+    const cursorDiv=editArea.querySelector('.edit-cursor');
+    if(cursorDiv){
+      const range=document.createRange();
+      const sel=window.getSelection();
+      range.selectNodeContents(cursorDiv);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    card.scrollIntoView({behavior:'smooth',block:'center'});
+  },100);
+}
+
+function cancelEditCard(idx){
+  document.getElementById('ai-card-'+idx).classList.remove('editing');
+}
+
+function sendEditCard(idx){
+  const editArea=document.getElementById('ai-card-edit-'+idx);
+  const text=editArea.textContent.trim();
+  if(!text)return;
+  // Build formatted HTML for chat (same structure as edit, but all black)
+  const m=aiMaterials[idx];
+  let chatHTML=`<div style="font-size:13px;font-weight:700;margin-bottom:4px">【${m.tag}】${m.title}</div>`;
+  chatHTML+=`<div style="margin-bottom:4px">${m.summary}</div>`;
+  if(m.points&&m.points.length){
+    chatHTML+='<div style="margin:4px 0">';
+    chatHTML+=m.points.map((p,i)=>`${i+1}. ${p}`).join('<br>');
+    chatHTML+='</div>';
+  }
+  if(m.data) chatHTML+=`<div style="margin-top:4px">📊 ${m.data}</div>`;
+  if(m.quote) chatHTML+=`<div style="margin-top:4px;font-style:italic">引用：${m.quote}</div>`;
+  // Append user's new text (anything after the original content)
+  const cursorDiv=editArea.querySelector('.edit-cursor');
+  if(cursorDiv){
+    const userText=cursorDiv.textContent.trim();
+    if(userText) chatHTML+=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid #E8D5B0">${userText}</div>`;
+  }
+  document.getElementById('ai-card-'+idx).classList.remove('editing');
+  document.getElementById('ai-sidebar').classList.remove('show');
+  addMsg('',chatHTML,true);msgCount++;
+  checkInsightCard();
+
+  // Collapse AI fallback if present
+  const fb=document.querySelector('.msg.ai-fallback');
+  if(fb&&!fb.classList.contains('collapsed')){
+    fb.classList.add('collapsed');
+    const tog=fb.querySelector('.fb-toggle');if(tog)tog.textContent='查看AI参考 ▼';
+  }
+  if(fallbackTimer){clearTimeout(fallbackTimer);fallbackTimer=null}
+
+  // Trigger NPC replies
+  const pool=[...charColors];
+  const replyCount=2+Math.floor(Math.random()*2);
+  const picked=[];
+  for(let i=0;i<replyCount&&pool.length>0;i++){
+    const ix=Math.floor(Math.random()*pool.length);
+    picked.push(pool.splice(ix,1)[0]);
+  }
+  let delay=1200+Math.random()*800;
+  picked.forEach((ch,i)=>{
+    const ri=charColors.findIndex(c=>c.name===ch.name);
+    const styleMap2={'阿哲':['引用数据来讨论这个问题——这个思路很严谨，我补充一点我们项目的经验。','这些数据确实能说明问题，跟我们观察到的趋势一致。','从数据来看方向是对的，关键是怎么落地到具体设计里。'],'小棠':['有数据支撑就靠谱多了。我们项目也可以拉类似的数据对比一下。','这个引用很到位，补充一下我们的实际情况也差不多。','用数据说话比感觉准，我觉得可以基于这个方向继续深挖。'],'青叶':['这些案例很有参考价值，尤其是数值部分跟我了解的情况吻合。','引用得好！不过不同品类可能差异比较大，不能直接套用。','从体验角度看，这些数据背后反映的玩家心理很值得分析。'],'言午':['有据可依，这个讨论质量上来了。我回头也把我们的数据整理一下。','这个引用帮我回忆起之前踩过的坑，确实是这样的。','数据面很全，实操层面我再补充几个注意点。'],'蓝山':['这个角度的数据我之前没注意到，涨知识了。','行业数据和我们内部的表现大体一致，但细节上有些差异值得讨论。','能把数据来源发一下吗？我想看看原始报告里还有没有其他有用的信息。']};
+    const pool3=styleMap2[ch.name]||['这个引用很有价值，值得深入讨论。'];
+    const reply=pool3[Math.floor(Math.random()*pool3.length)];
+    setTimeout(()=>{
+      if(i===0)typing.textContent=ch.name+' 正在输入…';
+      setTimeout(()=>{
+        typing.textContent='';addMsg(ch.name,reply);active=ri;msgCount++;checkInsightCard();
+        if(i<picked.length-1)setTimeout(()=>{typing.textContent=picked[i+1].name+' 正在输入…'},400);
+        else setTimeout(()=>{active=-1;maybeAIQuestion()},2000);
+      },800+Math.random()*600);
+    },delay*i);
+  });
+}
+
+// ═══════════════════════════════════════
+//  FEATURE 3: AI Fallback (delayed)
+// ═══════════════════════════════════════
+let fallbackTimer=null;
+
+// Detail data for each fallback item
+const fbDetails=[
+  {
+    id:'fb-d0',
+    tag:'相关讨论',
+    title:'抽签玩法融合的成与败',
+    src:'3个月前 · 阿哲、白露等5人参与 · 12条回复',
+    points:['底层玩法质量是前提，抽签只能放大已有乐趣','通用流派比角色专属流派更适合中小团队（工作量减少约60%）','PVE和PVP需分开设计策略'],
+    quote:'阿哲: "我们试过给20个角色各做专属流派，最后砍到5个通用流派，反而留存涨了8%"',
+    data:'参与者留存率: 92% · 被引用次数: 7',
+  },
+  {
+    id:'fb-d1',
+    tag:'项目案例',
+    title:'通用流派 vs 角色专属流派',
+    src:'2个月前 · 言午、蓝山等4人参与 · 8条回复',
+    points:['角色专属: 3人周/角色，精度高但难量产','通用流派: 0.5人周/角色，适配性强且意外促进UGC','《星渊纪元》从40角色专属砍到通用流派后，社区讨论量反增40%'],
+    quote:'言午: "通用流派不是偷懒，是给玩家留了自己组合搭配的空间"',
+  },
+  {
+    id:'fb-d2',
+    tag:'项目案例',
+    title:'《星渊纪元》PVE数值放大策略 · 项目B复盘',
+    src:'项目B复盘文档 · 2024.11 · 已验证',
+    points:['PVE模式伤害倍率放大到常规5倍，玩家爽感评分3.2→4.6','必须隔离PVP数值体系，否则严重破坏竞技平衡','关键：让玩家"感觉"变强，不是单纯数字膨胀'],
+    data:'留存: +12% (7日) / 付费: +18% (首月)',
+  },
+  {
+    id:'fb-d3',
+    tag:'行业参考',
+    title:'数值膨胀对长期留存的影响',
+    src:'行业分析 · 2024 Q3 · 86款产品样本',
+    points:['无节制数值膨胀导致30日留存平均下降15%','成功案例通过"赛季重置"或"层级天花板"控制膨胀曲线','分段式膨胀（每N级一个平台期）效果优于线性膨胀'],
+    data:'成功控制膨胀的产品30日留存: +8% vs 对照组',
+  },
+];
+
+function toggleFBDetail(id){
+  const el=document.getElementById(id);
+  if(el.classList.contains('show')){el.classList.remove('show')}
+  else{
+    // Close any other open detail
+    document.querySelectorAll('.fb-detail.show').forEach(d=>d.classList.remove('show'));
+    el.classList.add('show');
+    msgsEl.scrollTop=msgsEl.scrollHeight;
+  }
+}
+
+function closeFBDetail(id){document.getElementById(id).classList.remove('show')}
+
+function buildFBDetailHTML(d){
+  let h=`<div class="fb-detail" id="${d.id}">`;
+  h+=`<span class="fd-tag">${d.tag}</span><div class="fd-title">${d.title}</div>`;
+  if(d.points){h+='<ul class="fd-points">';d.points.forEach(p=>h+=`<li>${p}</li>`);h+='</ul>'}
+  if(d.quote)h+=`<div class="fd-quote">${d.quote}</div>`;
+  if(d.data)h+=`<div><span class="fd-data">📊 ${d.data}</span></div>`;
+  h+=`<div class="fd-src">📎 ${d.src}</div>`;
+  h+=`<div class="fd-close" onclick="closeFBDetail('${d.id}')">收起 ▲</div>`;
+  h+='</div>';
+  return h;
+}
+
+function scheduleAIFallback(){
+  // In demo: 8 seconds; in production: 4-6 hours
+  fallbackTimer=setTimeout(()=>{
+    if(fallbackShown)return;
+    fallbackShown=true;
+    typing.textContent='AI 正在整理相关资料…';
+    setTimeout(()=>{
+      typing.textContent='';
+      const d=document.createElement('div');
+      d.className='msg ai-fallback other';
+      d.setAttribute('data-char','AI整理');
+      d.innerHTML=`
+        <div class="nm">📚 AI参考整理</div>
+        <div class="bb">
+          <div class="fb-hdr">💡 以下是AI根据知识库整理的参考资料，点击可查看详情</div>
+          <div class="fb-body">
+            <div class="fb-item" onclick="toggleFBDetail('fb-d0')">
+              <strong>📎 相关讨论：抽签玩法融合的成与败</strong>
+              <div class="fb-peek">团队共识：底层玩法质量是前提，抽签机制只是体验放大器</div>
+            </div>
+            ${buildFBDetailHTML(fbDetails[0])}
+
+            <div class="fb-item" onclick="toggleFBDetail('fb-d1')">
+              <strong>📎 通用流派 vs 角色专属流派</strong>
+              <div class="fb-peek">工作量差异6倍，但通用流派意外促进了社区UGC</div>
+            </div>
+            ${buildFBDetailHTML(fbDetails[1])}
+
+            <div class="fb-item" onclick="toggleFBDetail('fb-d2')">
+              <strong>📎 PVE数值放大策略 · 项目B复盘</strong>
+              <div class="fb-peek">爽感评分3.2→4.6，但需隔离PVP数值体系</div>
+            </div>
+            ${buildFBDetailHTML(fbDetails[2])}
+
+            <div class="fb-item" onclick="toggleFBDetail('fb-d3')">
+              <strong>📎 数值膨胀对长期留存的影响</strong>
+              <div class="fb-peek">无节制膨胀导致30日留存平均下降15%</div>
+            </div>
+            ${buildFBDetailHTML(fbDetails[3])}
+
+            <div style="font-size:10px;color:#8B6B4A;margin-top:8px;padding-top:6px;border-top:1px dashed #E8D5B0">以上为AI整理的参考，欢迎补充实际项目经验</div>
+          </div>
+          <div class="fb-toggle" onclick="toggleFallback(this)">收起AI参考 ▲</div>
+        </div>
+        <div class="tm">${now()}</div>`;
+      msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+      msgCount++;
+    },1500);
+  },8000);
+}
+
+function toggleFallback(el){
+  const msg=el.closest('.msg');
+  msg.classList.toggle('collapsed');
+  el.textContent=msg.classList.contains('collapsed')?'查看AI参考 ▼':'收起AI参考 ▲';
+}
+
+// ═══════════════════════════════════════
+//  FEATURE 4: Insight Card (after N msgs)
+// ═══════════════════════════════════════
+function checkInsightCard(){
+  if(insightShown||msgCount<7)return;
+  insightShown=true;
+  setTimeout(()=>{
+    const body=document.getElementById('insight-body');
+    body.innerHTML=`
+      <div class="ins-section"><div class="ins-label">核心结论</div>抽签/Roguelike玩法融合的成功前提是底层玩法本身足够有趣，随机机制只能放大已有的乐趣而非创造新的。</div>
+      <div class="ins-section"><div class="ins-label">主要分歧</div>PVE模式下可以激进放大数值体验 vs 需要控制数值膨胀对长期留存的影响。角色专属流派精度高但工作量大 vs 通用流派适配性强但深度不足。</div>
+      <div class="ins-section"><div class="ins-label">可复用经验</div>通用流派意外成为玩家社区讨论热点，兼顾了设计效率与用户参与度，值得中小团队参考。</div>
+      <div class="ins-people">贡献者：阿哲、小棠、青叶、言午、蓝山</div>`;
+    document.getElementById('insight-card').classList.add('show');
+    msgsEl.scrollTop=msgsEl.scrollHeight+200;
+  },1500);
+}
+
+// ═══════════════════════════════════════
+//  AI Proactive Questions (replaces insight card追问)
+// ═══════════════════════════════════════
+const aiQuestions=[
+  {q:'刚才提到通用流派"深度不足"——具体是指策略深度、构建多样性、还是角色差异化？有没有在通用框架下依然做出足够深度的案例？',ctx:'基于讨论分歧：通用流派适配性强但深度不足'},
+  {q:'数值放大在短期内确实能提升爽感，但长线运营中怎么避免"爽感疲劳"？《星渊纪元》后续版本有没有遇到天花板？',ctx:'基于讨论分歧：数值膨胀对长期留存的影响'},
+  {q:'大家都同意"底层玩法够好"是前提，但怎么判断底层玩法是否达标？有没有可量化的评估标准，还是只能靠体感？',ctx:'基于核心共识：底层玩法质量是前提'},
+  {q:'刚才聊的主要是PVE场景，如果是PVP或竞技向产品，抽签机制的设计逻辑是不是完全不同？有没有人做过这方面的尝试？',ctx:'讨论中尚未覆盖的方向'},
+];
+let aiQIdx=0,userSendCount=0;
+
+// Called once after seed messages finish
+function postSeedAIQuestion(){
+  const q=aiQuestions[aiQIdx++];
+  typing.textContent='AI 正在整理追问…';
+  setTimeout(()=>{
+    typing.textContent='';
+    const d=document.createElement('div');
+    d.className='msg ai-question other';
+    d.setAttribute('data-char','AI追问');
+    d.innerHTML=`
+      <div class="nm">💬 AI · 讨论引导</div>
+      <div class="bb">
+        <div class="aq-label">基于当前讨论，有一个方向值得进一步展开：</div>
+        ${q.q}
+        <div class="aq-context">${q.ctx}</div>
+      </div>
+      <div class="tm">${now()}</div>`;
+    msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+    msgCount++;
+    checkInsightCard();
+    // Start fallback timer after AI question
+    scheduleAIFallback();
+  },1500);
+}
+
+// Called after NPC replies to user messages
+function maybeAIQuestion(){
+  userSendCount++;
+  if(Math.random()<0.4){
+    if(aiQIdx>=aiQuestions.length)return;
+    const q=aiQuestions[aiQIdx++];
+    setTimeout(()=>{
+      typing.textContent='AI 正在整理追问…';
+      setTimeout(()=>{
+        typing.textContent='';
+        const d=document.createElement('div');
+        d.className='msg ai-question other';
+        d.setAttribute('data-char','AI追问');
+        d.innerHTML=`
+          <div class="nm">💬 AI · 讨论引导</div>
+          <div class="bb">
+            <div class="aq-label">基于当前讨论，有一个方向值得进一步展开：</div>
+            ${q.q}
+            <div class="aq-context">${q.ctx}</div>
+          </div>
+          <div class="tm">${now()}</div>`;
+        msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+        msgCount++;
+        checkInsightCard();
+      },1200);
+    },1500+Math.random()*1000);
+  }
+}
+
+// ═══════════════════════════════════════
+//  Send Message
+// ═══════════════════════════════════════
+function send(){
+  const raw=mi.textContent.trim();if(!raw)return;mi.innerHTML='';
+  // Format: if multi-line, first line = bold title, rest = body
+  const lines=raw.split('\n').filter(l=>l.trim());
+  let chatHTML;
+  if(lines.length>=2){
+    chatHTML=`<div style="font-size:13px;font-weight:700;margin-bottom:4px">${lines[0]}</div>`;
+    chatHTML+=lines.slice(1).map(l=>`<div>${l}</div>`).join('');
+  }else{
+    chatHTML=raw;
+  }
+  // Close AI panels
+  document.getElementById('ai-suggest').style.display='none';
+  document.getElementById('ai-assist-btn').classList.remove('active');
+  sugVisible=false;
+  document.getElementById('ai-sidebar').classList.remove('show');
+  addMsg('',chatHTML,true);active=-1;msgCount++;
+
+  // Collapse AI fallback if present
+  const fb=document.querySelector('.msg.ai-fallback');
+  if(fb&&!fb.classList.contains('collapsed')){
+    fb.classList.add('collapsed');
+    const tog=fb.querySelector('.fb-toggle');if(tog)tog.textContent='查看AI参考 ▼';
+  }
+  // Cancel pending fallback
+  if(fallbackTimer){clearTimeout(fallbackTimer);fallbackTimer=null}
+
+  // Pick 2-3 different characters to reply
+  const pool=[...charColors];
+  const replyCount=2+Math.floor(Math.random()*2); // 2 or 3
+  const picked=[];
+  for(let i=0;i<replyCount&&pool.length>0;i++){
+    const idx=Math.floor(Math.random()*pool.length);
+    picked.push(pool.splice(idx,1)[0]);
+  }
+
+  // Per-character reply styles
+  const styleMap={
+    '阿哲':[
+      '我觉得关键还是要看底层数据，光靠感觉判断容易踩坑。',
+      '这个思路可以，但要注意和核心玩法的适配度，别做成两张皮。',
+      '从系统设计角度看，这个方案的复杂度可能需要提前评估一下。',
+    ],
+    '小棠':[
+      '我们项目之前试过类似的，效果比预期好不少，可以展开聊聊。',
+      '有道理，不过实际落地的时候资源和排期都得考虑进去。',
+      '这个方向值得试，但建议先做个小规模验证，别一上来就铺开。',
+    ],
+    '青叶':[
+      '从玩家体验角度看，这个点子挺有吸引力的。问题是怎么量化效果。',
+      '确实，我看到的几个案例也是这么做的，核心是把"爽感"做到位。',
+      '这让我想到《星渊纪元》的做法，思路类似但细节上有些不同。',
+    ],
+    '言午':[
+      '这个角度很有意思。工作量方面我有一些实际经验可以分享。',
+      '同意判断，但具体实现上可能需要分阶段来，一步到位风险太高。',
+      '我之前在复盘里写过相关内容，回头把链接贴出来大家参考。',
+    ],
+    '蓝山':[
+      '能展开说说你们是怎么具体执行的吗？想了解一下实际操作层面的细节。',
+      '跟我观察到的趋势吻合。行业里确实越来越多团队在往这个方向走。',
+      '好观点。不过我觉得不同用户群体的接受度可能差异很大，不能一概而论。',
+    ],
+  };
+
+  let delay=1200+Math.random()*800;
+  picked.forEach((ch,i)=>{
+    const ri=charColors.findIndex(c=>c.name===ch.name);
+    const pool2=styleMap[ch.name]||['这个角度值得深入讨论。'];
+    const reply=pool2[Math.floor(Math.random()*pool2.length)];
+    setTimeout(()=>{
+      if(i===0)typing.textContent=ch.name+' 正在输入…';
+      setTimeout(()=>{
+        typing.textContent='';
+        addMsg(ch.name,reply);
+        active=ri;msgCount++;
+        checkInsightCard();
+        // Queue next replier's typing indicator
+        if(i<picked.length-1){
+          setTimeout(()=>{typing.textContent=picked[i+1].name+' 正在输入…'},400);
+        } else {
+          setTimeout(()=>{active=-1;maybeAIQuestion()},2000);
+        }
+      },800+Math.random()*600);
+    },delay*i);
+  });
+}
+mi.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+
+// ═══ Character Click - Profile Card ═══
+const charProfiles=[
+  {name:'阿哲',role:'系统策划',expertise:['数值设计','系统架构','数据分析'],contributions:12,quote:'光靠感觉判断容易踩坑，关键还是要看底层数据。'},
+  {name:'小棠',role:'关卡策划',expertise:['关卡设计','用户测试','项目管理'],contributions:9,quote:'建议先做个小规模验证，别一上来就铺开。'},
+  {name:'青叶',role:'体验设计',expertise:['玩家体验','竞品分析','付费设计'],contributions:15,quote:'核心是把"爽感"做到位，数据自然就来了。'},
+  {name:'言午',role:'技术策划',expertise:['工作流优化','工具开发','流派设计'],contributions:8,quote:'通用流派不是偷懒，是给玩家留了自己组合搭配的空间。'},
+  {name:'蓝山',role:'市场策划',expertise:['行业趋势','用户研究','品类分析'],contributions:11,quote:'不同用户群体的接受度差异很大，不能一概而论。'},
+];
+
+const charPositions=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
+
+c.addEventListener('click',(e)=>{
+  const r=c.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
+  const mx=(e.clientX-r.left)*sx,my=(e.clientY-r.top)*sy;
+  for(let i=charPositions.length-1;i>=0;i--){
+    const cp=charPositions[i],dx=mx-cp.x,dy=my-(cp.y-30);
+    if(dx*dx+dy*dy<35*35){showProfile(i);return}
+  }
+  closeProfile();
+});
+
+function showProfile(idx){
+  const p=charProfiles[idx];
+  document.getElementById('cp-name').textContent=p.name+' · '+p.role;
+  let html='';
+  html+=`<div style="margin-bottom:4px">`+p.expertise.map(e=>`<span class="cp-tag">${e}</span>`).join('')+'</div>';
+  html+=`<div style="font-style:italic;color:#5C4033;margin:4px 0">"${p.quote}"</div>`;
+  html+=`<div class="cp-stat">历史贡献: ${p.contributions}次讨论参与</div>`;
+  document.getElementById('cp-body').innerHTML=html;
+  document.getElementById('char-profile').classList.add('show');
+}
+
+function closeProfile(){
+  document.getElementById('char-profile').classList.remove('show');
+}
+
+// ═══ Invite Feature ═══
+const inviteCandidates=[
+  {name:'白露',role:'体验设计',color:'#DD7799'},
+  {name:'阿哲',role:'系统策划',color:'#4488CC'},
+  {name:'小棠',role:'关卡策划',color:'#DD5555'},
+  {name:'青叶',role:'体验设计',color:'#55AA66'},
+  {name:'言午',role:'技术策划',color:'#EE9933'},
+  {name:'蓝山',role:'市场策划',color:'#8866AA'},
+  {name:'老陈',role:'主程',color:'#666'},
+  {name:'木鱼',role:'美术总监',color:'#CC7744'},
+];
+let inviteOpen=false;
+
+function toggleInvitePanel(){
+  inviteOpen=!inviteOpen;
+  const panel=document.getElementById('invite-panel');
+  if(inviteOpen){
+    panel.style.display='block';
+    const list=document.getElementById('invite-list');
+    list.innerHTML='';
+    inviteCandidates.forEach(c=>{
+      const d=document.createElement('div');d.className='invite-item';
+      d.innerHTML=`<span class="inv-dot" style="background:${c.color}"></span><span class="inv-name">${c.name}</span><span style="font-size:9px;color:#888">${c.role}</span>`;
+      d.onclick=()=>sendInvite(c);
+      list.appendChild(d);
+    });
+  }else{
+    panel.style.display='none';
+  }
+}
+
+function sendInvite(person){
+  toggleInvitePanel();
+  // Add system message to chat
+  const d=document.createElement('div');
+  d.className='msg other';d.setAttribute('data-char','系统');
+  d.innerHTML=`<div class="nm" style="color:#4A8BC8">📩 邀请通知</div><div class="bb" style="background:#F0F7FF;border-color:#C8D8E8;font-size:11px">你邀请了 <strong>${person.name}</strong>（${person.role}）参与本次讨论。对方将在通知栏收到提醒。</div><div class="tm">${now()}</div>`;
+  msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+}
+
+// ═══ Main Loop ═══
+function tick(){frame++;drawScene(frame);requestAnimationFrame(tick)}tick();
+</script>
+</body>
+</html>
