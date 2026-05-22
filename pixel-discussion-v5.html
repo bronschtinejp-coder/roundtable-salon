@@ -9,10 +9,23 @@
   body{background:#1a1220;font-family:'Microsoft YaHei','微软雅黑',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
   #container{width:100vw;height:100vh;max-width:1280px;max-height:720px;aspect-ratio:16/9;display:flex;border:3px solid #3E2210;box-shadow:0 0 40px rgba(0,0,0,0.5)}
   /* Left: scene */
-  #scene{flex:0 0 50%;position:relative;background:#2A1808}
-  #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
-  #back{position:absolute;top:12px;left:12px;z-index:5;background:#3E2210;border:2px solid #E8B830;color:#F5E6C8;font-size:11px;font-weight:700;padding:5px 14px;cursor:pointer;transition:all 0.15s}
+  #scene{flex:0 0 30%;position:relative;background:#2A1808}
+  #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
+  #back{position:absolute;top:8px;left:8px;z-index:5;background:#3E2210;border:2px solid #E8B830;color:#F5E6C8;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer;transition:all 0.15s}
   #back:hover{background:#E8B830;color:#2A1808;border-color:#FFD84D}
+  /* Character profile popup */
+  #char-profile{
+    display:none;position:absolute;bottom:12px;left:12px;right:12px;z-index:6;
+    background:#F5E6C8;border:2px solid #E8B830;padding:10px 12px;font-size:10px;
+    line-height:1.6;color:#2A1808;animation:fIn .2s ease;
+  }
+  #char-profile.show{display:block}
+  #char-profile .cp-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  #char-profile .cp-name{font-weight:700;font-size:12px;color:#2A1808}
+  #char-profile .cp-close{cursor:pointer;font-size:12px;color:#8B6B4A}
+  #char-profile .cp-close:hover{color:#E8B830}
+  #char-profile .cp-tag{display:inline-block;background:#2B5E3A;color:#FFF;font-size:9px;padding:1px 6px;margin-right:4px;font-weight:700}
+  #char-profile .cp-stat{font-size:9px;color:#8B6B4A;margin-top:4px}
   /* Right: chat panel */
   #chat{flex:1;display:flex;flex-direction:column;background:#F5E6C8;border-left:4px solid #3E2210;font-size:13px;position:relative;overflow:hidden}
   #chat-hdr{padding:12px 16px;font-weight:700;color:#2A1808;border-bottom:3px solid #8B6B4A;text-align:center;font-size:14px;letter-spacing:2px;flex-shrink:0;background:#E8D5B0;position:relative;z-index:2}
@@ -83,43 +96,25 @@
     font-family:'Microsoft YaHei',sans-serif;transition:all 0.15s;
   }
   .ai-card .ai-use-btn:hover{background:#E8B830;border-color:#E8B830}
-
-  /* ═══ AI Card Editor ═══ */
-  #ai-editor{
-    display:none;position:absolute;top:0;left:0;bottom:0;z-index:20;
-    width:50%;background:rgba(42,24,8,0.85);
-    flex-direction:column;padding:16px;
+  .ai-card.editing{background:#FFF;border-color:#E8B830;border-width:2px}
+  .ai-card.editing .ai-card-view{display:none}
+  .ai-card.editing .ai-card-edit{display:block}
+  .ai-card .ai-card-edit{display:none}
+  .ai-card .ai-card-edit textarea{
+    width:100%;min-height:100px;margin:6px 0;padding:8px;border:1px solid #C8B090;
+    background:#FFFDF5;font-family:'Microsoft YaHei',sans-serif;font-size:11px;
+    line-height:1.7;color:#2A1808;resize:vertical;outline:none;
   }
-  #ai-editor.show{display:flex}
-  #ai-editor-box{
-    background:#F5E6C8;border:2px solid #E8B830;
-    flex:1;display:flex;flex-direction:column;animation:fIn .2s ease;
-    overflow:hidden;
+  .ai-card .ai-card-edit textarea:focus{border-color:#E8B830}
+  .ai-card .ai-card-edit .edit-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:4px}
+  .ai-card .ai-card-edit .edit-actions button{
+    padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer;
+    font-family:'Microsoft YaHei',sans-serif;border:1px solid;transition:all 0.15s;
   }
-  #ai-editor-hdr{
-    padding:10px 14px;background:#3E2210;color:#E8B830;font-size:12px;font-weight:700;
-    display:flex;justify-content:space-between;align-items:center;flex-shrink:0;
-  }
-  #ai-editor-hdr span{cursor:pointer;font-size:14px}
-  #ai-editor-hdr span:hover{color:#FFD84D}
-  #ai-editor-src{font-size:10px;color:#8B6B4A;padding:8px 14px;border-bottom:1px solid #E8D5B0;flex-shrink:0}
-  #ai-editor textarea{
-    flex:1;margin:10px 14px;padding:10px;border:2px solid #C8B090;background:#FFFDF5;
-    font-family:'Microsoft YaHei',sans-serif;font-size:12px;line-height:1.8;color:#2A1808;
-    resize:none;outline:none;
-  }
-  #ai-editor textarea:focus{border-color:#E8B830}
-  #ai-editor-actions{
-    padding:8px 14px 12px;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;
-  }
-  #ai-editor-actions button{
-    padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;
-    font-family:'Microsoft YaHei',sans-serif;border:2px solid;transition:all 0.15s;
-  }
-  #ai-editor-cancel{background:#E8D5B0;border-color:#8B6B4A;color:#2A1808}
-  #ai-editor-cancel:hover{background:#C8B090}
-  #ai-editor-send{background:#E8B830;border-color:#E8B830;color:#2A1808}
-  #ai-editor-send:hover{background:#FFD84D}
+  .ai-card .ai-card-edit .edit-cancel{background:#E8D5B0;border-color:#8B6B4A;color:#2A1808}
+  .ai-card .ai-card-edit .edit-cancel:hover{background:#C8B090}
+  .ai-card .ai-card-edit .edit-send{background:#E8B830;border-color:#E8B830;color:#2A1808}
+  .ai-card .ai-card-edit .edit-send:hover{background:#FFD84D}
 
   /* ═══ AI Writing Assistant Panel ═══ */
   #ai-suggest{
@@ -220,20 +215,12 @@
 <div id="scene">
   <canvas id="c"></canvas>
   <button id="back" onclick="history.back()">← 返回沙龙</button>
-  <!-- AI Card Editor (overlays left scene area) -->
-  <div id="ai-editor">
-    <div id="ai-editor-box">
-      <div id="ai-editor-hdr">
-        <div>✏️ 引用编辑</div>
-        <span onclick="closeEditor()">✕</span>
-      </div>
-      <div id="ai-editor-src"></div>
-      <textarea id="ai-editor-text"></textarea>
-      <div id="ai-editor-actions">
-        <button id="ai-editor-cancel" onclick="closeEditor()">取消</button>
-        <button id="ai-editor-send" onclick="sendFromEditor()">发送到讨论</button>
-      </div>
+  <div id="char-profile">
+    <div class="cp-hdr">
+      <span class="cp-name" id="cp-name"></span>
+      <span class="cp-close" onclick="closeProfile()">✕</span>
     </div>
+    <div id="cp-body"></div>
   </div>
 </div>
 <div id="chat">
@@ -275,7 +262,7 @@
 // ═══════════════════════════════════════
 //  Canvas Scene (same as v4, compact)
 // ═══════════════════════════════════════
-const W=640,H=720,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+const W=384,H=720,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
 function sz(){const s=Math.min(scene.clientWidth/W,scene.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
 window.addEventListener('resize',sz);sz();
 function R(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(x|0,y|0,w|0,h|0)}
@@ -311,52 +298,131 @@ function drawChar(cx,cy,ci,act,f){
   ctx.restore();
 }
 
+// ═══ Anime-style Lightbulb Indicator ═══
+// Lifecycle: pop-in (10 frames) → glow (150 frames ~2.5s) → fade-out (30 frames)
+let bulbState='idle',bulbTimer=0,bulbCharIdx=-1,lastActive=-1;
+const BULB_POPIN=10,BULB_HOLD=150,BULB_FADEOUT=30;
+
+function drawBulbIndicator(f){
+  // Detect active change → trigger new bulb
+  if(active!==lastActive){
+    lastActive=active;
+    if(active>=0){bulbState='popin';bulbTimer=0;bulbCharIdx=active}
+  }
+  if(bulbState==='idle'||bulbCharIdx<0)return;
+  
+  bulbTimer++;
+  let alpha=1,scale=1;
+  
+  if(bulbState==='popin'){
+    // Bounce-in: overshoot then settle
+    const t=bulbTimer/BULB_POPIN;
+    scale=t<0.6?t*1.8:1.2-((t-0.6)/0.4)*0.2; // overshoot to 1.2 then back to 1.0
+    alpha=t;
+    if(bulbTimer>=BULB_POPIN){bulbState='hold';bulbTimer=0}
+  }else if(bulbState==='hold'){
+    scale=1;alpha=1;
+    if(bulbTimer>=BULB_HOLD){bulbState='fadeout';bulbTimer=0}
+  }else if(bulbState==='fadeout'){
+    scale=1-bulbTimer/BULB_FADEOUT*0.3;
+    alpha=1-bulbTimer/BULB_FADEOUT;
+    if(bulbTimer>=BULB_FADEOUT){bulbState='idle';return}
+  }
+  
+  const pos=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
+  const bx=pos[bulbCharIdx].x,by=pos[bulbCharIdx].y-92;
+  
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  ctx.translate(bx,by);
+  ctx.scale(scale,scale);
+  
+  // Lightbulb (16x22 pixels, drawn centered at 0,0)
+  const gold=P.gold,goldL='#FFD84D',goldD='#B8901E',white='#FFFDE0';
+  // Bulb glass
+  R(-5,-11,10,4,goldL);    // top curve
+  R(-7,-7,14,8,goldL);     // main bulb
+  R(-6,-9,12,2,white);     // highlight
+  // Inner glow pulse
+  const innerGlow=0.4+Math.sin(f*0.1)*0.15;
+  R(-4,-7,8,5,`rgba(255,255,220,${innerGlow})`);
+  // Base/screw
+  R(-4,1,8,3,goldD);
+  R(-3,4,6,2,'#8B6B14');
+  R(-4,6,8,3,goldD);
+  
+  // Pop-in radiating lines (only during popin + first 20 frames of hold)
+  if(bulbState==='popin'||(bulbState==='hold'&&bulbTimer<20)){
+    const lineAlpha=bulbState==='popin'?alpha:1-bulbTimer/20;
+    ctx.strokeStyle=`rgba(255,216,77,${lineAlpha*0.8})`;
+    ctx.lineWidth=2;
+    const rays=6;
+    for(let r=0;r<rays;r++){
+      const angle=(r/rays)*Math.PI*2-Math.PI/2;
+      const inner=12,outer=18+Math.sin(f*0.2+r)*2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle)*inner,Math.sin(angle)*inner-4);
+      ctx.lineTo(Math.cos(angle)*outer,Math.sin(angle)*outer-4);
+      ctx.stroke();
+    }
+  }
+  
+  ctx.restore();
+}
+
 function drawScene(f){
-  R(0,0,W,280,P.wall);for(let y=20;y<280;y+=36){R(0,y,W,2,P.wallD);R(0,y+18,W,1,P.wallL+'44')}for(let x=0;x<W;x+=140)R(x,0,3,280,P.wallD);
+  // Room (384px wide)
+  R(0,0,W,280,P.wall);for(let y=20;y<280;y+=36){R(0,y,W,2,P.wallD);R(0,y+18,W,1,P.wallL+'44')}for(let x=0;x<W;x+=96)R(x,0,2,280,P.wallD);
   R(0,268,W,14,P.beam);R(0,268,W,3,P.beamL);R(0,280,W,4,P.trim);
-  R(0,284,W,36,P.wpDark);for(let x=0;x<W;x+=70){R(x+4,288,62,28,P.wallpaper);R(x+8,292,54,20,P.wpLight)}R(0,318,W,4,P.trim);
-  R(0,322,W,H-322,P.floor);for(let y=322;y<H;y+=20){const off=(Math.floor((y-322)/20)%2)*50;for(let x=off;x<W;x+=100){R(x,y,100,20,((x+y)%200<100)?P.floorL:P.floor);R(x,y,100,2,P.floorH+'44');R(x,y+18,100,2,P.floorD);R(x,y,2,20,P.floorD+'88')}}
-  const rx=120,ry=500,rw=400,rh=120;R(rx,ry,rw,rh,P.rugEdge);R(rx+4,ry+4,rw-8,rh-8,P.rug);R(rx+10,ry+10,rw-20,rh-20,P.rugC);R(rx+16,ry+16,rw-32,rh-32,P.rugG);R(rx+22,ry+22,rw-44,rh-44,P.rug);
-  for(let fx=rx+8;fx<rx+rw-8;fx+=10){R(fx,ry-3,3,5,P.rugG);R(fx,ry+rh-2,3,5,P.rugG)}
-  // Window
-  const wx=240,wy=40,ww=160,wh=180;R(wx-6,wy-6,ww+12,wh+12,P.wdD);R(wx-3,wy-3,ww+6,wh+6,P.wd);R(wx,wy,ww,wh,P.skyTop);R(wx,wy+wh/3,ww,wh/3,P.sky);R(wx,wy+2*wh/3,ww,wh/3,'#2A4A6A');
-  for(let i=0;i<10;i++){const sx2=wx+10+((i*43)%140),sy2=wy+8+((i*67)%80);const tw2=Math.sin(f*0.04+i*1.5)>0.2?2:1;R(sx2,sy2,tw2,tw2,P.star)}
-  ctx.fillStyle=P.moon;ctx.beginPath();ctx.arc(wx+ww-30,wy+30,12,0,Math.PI*2);ctx.fill();ctx.fillStyle=P.skyTop;ctx.beginPath();ctx.arc(wx+ww-24,wy+27,10,0,Math.PI*2);ctx.fill();
-  R(wx,wy+wh-30,ww,30,'#1A3328');R(wx+20,wy+wh-44,10,20,'#0D2218');R(wx+16,wy+wh-48,18,10,'#0D2218');R(wx+90,wy+wh-50,12,24,'#0D2218');R(wx+85,wy+wh-54,22,12,'#0D2218');
-  R(wx+ww/2-2,wy,4,wh,P.wdL);R(wx,wy+wh/2-2,ww,4,P.wdL);
-  R(wx-3,wy-3,16,wh+6,'#8B3030');R(wx+ww-13,wy-3,16,wh+6,'#8B3030');
-  // Fireplace
-  const fpx=480,fpy=50,fpw=130,fph=180;R(fpx,fpy,fpw,fph,P.stoneD);
-  for(let sy=fpy;sy<fpy+fph;sy+=16){const off2=(Math.floor((sy-fpy)/16)%2)*24;for(let sx=fpx+off2;sx<fpx+fpw;sx+=48)R(sx+1,sy+1,Math.min(46,fpx+fpw-sx-1),14,P.stone)}
-  R(fpx-8,fpy-10,fpw+16,14,P.wdD);R(fpx-6,fpy-8,fpw+12,10,P.wd);R(fpx-6,fpy-8,fpw+12,3,P.wdH);
-  const fbx=fpx+25,fby=fpy+50,fbw=80,fbh=fph-55;R(fbx,fby,fbw,fbh,'#1A0A05');
-  ctx.fillStyle=P.stone;ctx.beginPath();ctx.moveTo(fbx,fby+16);ctx.quadraticCurveTo(fbx+fbw/2,fby-10,fbx+fbw,fby+16);ctx.lineTo(fbx+fbw,fby);ctx.lineTo(fbx,fby);ctx.fill();
-  const t=f*0.08;R(fbx+12,fby+fbh-14,56,10,P.ink+'88');R(fbx+16,fby+fbh-18,20,8,'#5C2200');R(fbx+40,fby+fbh-16,24,6,'#4A1A00');
-  for(let i=0;i<4;i++){const px=fbx+18+i*15,ph=18+Math.sin(t+i*1.8)*8+Math.cos(t*1.5+i)*5,pw=10+Math.sin(t*0.7+i*2.2)*3;ctx.fillStyle=i%2===0?P.fire1:P.fire2;ctx.beginPath();ctx.moveTo(px,fby+fbh-14);ctx.quadraticCurveTo(px-pw/2,fby+fbh-14-ph*0.6,px+pw*0.3,fby+fbh-14-ph);ctx.quadraticCurveTo(px+pw,fby+fbh-14-ph*0.4,px+pw,fby+fbh-14);ctx.fill()}
-  for(let i=0;i<2;i++){const px=fbx+28+i*20,ph=10+Math.sin(t*1.3+i*2.5)*5;ctx.fillStyle=P.fire3;ctx.beginPath();ctx.moveTo(px,fby+fbh-16);ctx.quadraticCurveTo(px,fby+fbh-16-ph,px+6,fby+fbh-16-ph+3);ctx.quadraticCurveTo(px+8,fby+fbh-18,px+8,fby+fbh-16);ctx.fill()}
-  const ga=0.04+Math.sin(t*1.1)*0.015;ctx.fillStyle=P.warm+ga+')';ctx.beginPath();ctx.arc(fpx+fpw/2,fpy+fph-20,120,0,Math.PI*2);ctx.fill();
+  R(0,284,W,36,P.wpDark);for(let x=0;x<W;x+=64){R(x+3,288,58,28,P.wallpaper);R(x+6,292,52,20,P.wpLight)}R(0,318,W,4,P.trim);
+  R(0,322,W,H-322,P.floor);for(let y=322;y<H;y+=20){const off=(Math.floor((y-322)/20)%2)*40;for(let x=off;x<W;x+=80){R(x,y,80,20,((x+y)%160<80)?P.floorL:P.floor);R(x,y,80,2,P.floorH+'44');R(x,y+18,80,2,P.floorD);R(x,y,2,20,P.floorD+'88')}}
+  // Rug
+  const rx=40,ry=480,rw=304,rh=100;R(rx,ry,rw,rh,P.rugEdge);R(rx+4,ry+4,rw-8,rh-8,P.rug);R(rx+10,ry+10,rw-20,rh-20,P.rugC);R(rx+16,ry+16,rw-32,rh-32,P.rugG);R(rx+22,ry+22,rw-44,rh-44,P.rug);
+  for(let fx=rx+8;fx<rx+rw-8;fx+=10){R(fx,ry-3,3,4,P.rugG);R(fx,ry+rh-1,3,4,P.rugG)}
+  // Window (smaller, centered)
+  const wx=120,wy=40,ww=140,wh=160;R(wx-5,wy-5,ww+10,wh+10,P.wdD);R(wx-2,wy-2,ww+4,wh+4,P.wd);R(wx,wy,ww,wh,P.skyTop);R(wx,wy+wh/3,ww,wh/3,P.sky);R(wx,wy+2*wh/3,ww,wh/3,'#2A4A6A');
+  for(let i=0;i<8;i++){const sx2=wx+8+((i*43)%124),sy2=wy+6+((i*67)%70);const tw2=Math.sin(f*0.04+i*1.5)>0.2?2:1;R(sx2,sy2,tw2,tw2,P.star)}
+  ctx.fillStyle=P.moon;ctx.beginPath();ctx.arc(wx+ww-24,wy+24,10,0,Math.PI*2);ctx.fill();ctx.fillStyle=P.skyTop;ctx.beginPath();ctx.arc(wx+ww-19,wy+21,8,0,Math.PI*2);ctx.fill();
+  R(wx,wy+wh-24,ww,24,'#1A3328');R(wx+20,wy+wh-34,8,14,'#0D2218');R(wx+16,wy+wh-38,16,8,'#0D2218');R(wx+80,wy+wh-36,10,16,'#0D2218');R(wx+76,wy+wh-40,18,8,'#0D2218');
+  R(wx+ww/2-2,wy,3,wh,P.wdL);R(wx,wy+wh/2-2,ww,3,P.wdL);
+  R(wx-2,wy-2,12,wh+4,'#8B3030');R(wx+ww-10,wy-2,12,wh+4,'#8B3030');
   // Candles
-  [30,180,550].forEach(cx2=>{R(cx2,160,10,7,P.goldD);R(cx2+2,158,6,3,P.gold);R(cx2+3,148,4,14,P.paper);const cfh=3+Math.sin(f*0.09+cx2)*1.2;ctx.fillStyle=P.fire2;ctx.beginPath();ctx.moveTo(cx2+3,148);ctx.quadraticCurveTo(cx2+5,148-cfh,cx2+7,148);ctx.fill();ctx.fillStyle=P.warm+'0.04)';ctx.beginPath();ctx.arc(cx2+5,155,16,0,Math.PI*2);ctx.fill()});
-  // Painting
-  R(60,80,50,38,P.wdD);R(63,83,44,32,P.wd);R(66,86,38,26,P.sky);R(66,100,38,12,'#3A7040');R(72,96,12,10,'#2B5E3A');R(94,89,6,6,P.goldL);
-  // Table
-  const tbx=320,tby=440;ctx.fillStyle=P.shadow+'0.1)';ctx.beginPath();ctx.ellipse(tbx,tby+18,50,12,0,0,Math.PI*2);ctx.fill();R(tbx-8,tby+10,16,20,P.wdD);R(tbx-16,tby+28,32,5,P.wdD);R(tbx-14,tby+30,28,3,P.wd);ctx.fillStyle=P.wdL;ctx.beginPath();ctx.ellipse(tbx,tby,48,12,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=P.wd;ctx.beginPath();ctx.ellipse(tbx,tby-2,44,10,0,0,Math.PI*2);ctx.fill();
-  R(tbx-16,tby-10,10,6,'#FFF');R(tbx-14,tby-12,6,3,P.paper);R(tbx+8,tby-10,14,8,P.redD);R(tbx+10,tby-8,10,4,P.paper);
-  // Plant
-  R(18,420,18,14,'#A05020');R(20,416,14,5,'#8B4018');R(20,400,3,18,P.g1);R(24,396,5,20,P.g2);R(28,402,4,14,P.g3);R(22,394,6,6,P.g4);
-  // Bookshelf
-  const bsx=570,bsy=320;R(bsx,bsy,50,160,P.wdD);R(bsx+3,bsy+3,44,154,P.wd);
-  for(let sy2=bsy+12;sy2<bsy+150;sy2+=36){R(bsx+3,sy2,44,4,P.wdD);R(bsx+3,sy2,44,2,P.wdH);const bkCols=['#C84040','#264653','#2B5E3A','#E8B830','#8B5E3C','#4A7BA8','#7B4A8B'];let bx2=bsx+7;while(bx2<bsx+44){const bw2=4+((bx2*7+sy2)%3),bh2=10+((bx2*11+sy2)%10);R(bx2,sy2+36-bh2,bw2,bh2,bkCols[(bx2+sy2)%bkCols.length|0]);bx2+=bw2+2}}
-  // Lanterns
-  [200,420].forEach(lx=>{R(lx+5,240,2,30,P.goldD);R(lx,270,12,16,P.wdD);R(lx+2,272,8,12,'#2A1500');const la=0.35+Math.sin(f*0.06+lx)*0.1;ctx.fillStyle=P.warm+la+')';ctx.beginPath();ctx.arc(lx+6,278,5,0,Math.PI*2);ctx.fill();ctx.fillStyle=P.warm+(la*0.12)+')';ctx.beginPath();ctx.arc(lx+6,278,22,0,Math.PI*2);ctx.fill();R(lx-2,267,16,5,P.goldD);R(lx,269,12,2,P.gold)});
-  // Characters
-  const positions=[{x:140,y:520},{x:240,y:500},{x:340,y:510},{x:440,y:500},{x:520,y:520}];
-  charColors.forEach((ci,i)=>drawChar(positions[i].x,positions[i].y,ci,i===active,f));
+  [30,350].forEach(cx2=>{R(cx2,180,8,6,P.goldD);R(cx2+2,178,4,3,P.gold);R(cx2+2,168,4,12,P.paper);const cfh=3+Math.sin(f*0.09+cx2)*1.2;ctx.fillStyle=P.fire2;ctx.beginPath();ctx.moveTo(cx2+2,168);ctx.quadraticCurveTo(cx2+4,168-cfh,cx2+6,168);ctx.fill();ctx.fillStyle=P.warm+'0.04)';ctx.beginPath();ctx.arc(cx2+4,174,14,0,Math.PI*2);ctx.fill()});
+  // Small bookshelf (right side)
+  R(340,320,36,130,P.wdD);R(343,323,30,124,P.wd);
+  for(let sy2=332;sy2<440;sy2+=30){R(343,sy2,30,3,P.wdD);const bkCols=['#C84040','#264653','#2B5E3A','#E8B830','#4A7BA8'];let bx2=346;while(bx2<368){const bw2=3+((bx2+sy2)%3),bh2=8+((bx2*7+sy2)%8);R(bx2,sy2+30-bh2,bw2,bh2,bkCols[(bx2+sy2)%5]);bx2+=bw2+1}}
+  // Small plant (left)
+  R(10,400,14,11,'#A05020');R(12,396,10,4,'#8B4018');R(12,384,3,14,P.g1);R(16,380,4,16,P.g2);R(20,386,3,10,P.g3);R(14,378,5,5,P.g4);
+  // Characters in arc (narrower canvas)
+  const positions=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
+  charColors.forEach((ci,i)=>{
+    const isActive=i===active;
+    const actBob=isActive?Math.sin(frame*0.12)*2:0;
+    drawChar(positions[i].x,positions[i].y+actBob,ci,isActive,f);
+    // Active speaker: glow outline pulse + lightbulb popup
+    if(isActive){
+      const cx2=positions[i].x,cy2=positions[i].y+actBob;
+      // Pulsing glow outline around character
+      const glowAlpha=0.4+Math.sin(f*0.08)*0.2;
+      ctx.strokeStyle=`rgba(232,184,48,${glowAlpha})`;
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.roundRect(cx2-18,cy2-78,36,80,4);
+      ctx.stroke();
+      ctx.strokeStyle=`rgba(232,184,48,${glowAlpha*0.3})`;
+      ctx.lineWidth=4;
+      ctx.beginPath();
+      ctx.roundRect(cx2-20,cy2-80,40,84,6);
+      ctx.stroke();
+    }
+  });
+  // Anime-style lightbulb popup (single, lifecycle-based)
+  drawBulbIndicator(f);
   // Dust & vignette
-  for(let i=0;i<8;i++){const dx2=((f*0.3+i*80)%W),dy2=280+Math.sin(f*0.01+i*2)*40+i*30,da=0.15+Math.sin(f*0.02+i)*0.1;if(dy2>280&&dy2<H-40)R(dx2,dy2,2,2,P.warm+da+')')}
-  const vg=ctx.createRadialGradient(W/2,H/2,100,W/2,H/2,400);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(10,5,2,0.25)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
-  // Topic bar
-  const topic=params.get('topic')||'知识讨论';R(0,H-40,W,40,'rgba(42,24,8,0.75)');ctx.fillStyle=P.gold;ctx.font='bold 13px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText('讨论主题: '+topic,W/2,H-16);ctx.textAlign='start';
+  for(let i=0;i<5;i++){const dx2=((f*0.3+i*60)%W),dy2=280+Math.sin(f*0.01+i*2)*40+i*25,da=0.15+Math.sin(f*0.02+i)*0.1;if(dy2>280&&dy2<H-40)R(dx2,dy2,2,2,P.warm+da+')')}
+  const vg=ctx.createRadialGradient(W/2,H/2,80,W/2,H/2,300);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(10,5,2,0.3)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+  // Topic bar at bottom
+  const topic=params.get('topic')||'知识讨论';R(0,H-36,W,36,'rgba(42,24,8,0.8)');ctx.fillStyle=P.gold;ctx.font='bold 11px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(topic,W/2,H-14);ctx.textAlign='start';
 }
 
 // ═══════════════════════════════════════
@@ -574,27 +640,39 @@ function showAIMaterials(){
   const container=document.getElementById('ai-materials');
   container.innerHTML='';
   aiMaterials.forEach((m,idx)=>{
-    const card=document.createElement('div');card.className='ai-card';
-    let html=`<span class="ai-tag">${m.tag}</span>`;
-    if(m.relevance)html+=`<span class="ai-relevance">相关度: ${m.relevance}</span>`;
-    html+=`<div class="ai-title">${m.title}</div>`;
-    html+=`<div class="ai-summary">${m.summary}</div>`;
+    const card=document.createElement('div');card.className='ai-card';card.id='ai-card-'+idx;
+    // View mode
+    let viewHtml='<div class="ai-card-view">';
+    viewHtml+=`<span class="ai-tag">${m.tag}</span>`;
+    if(m.relevance)viewHtml+=`<span class="ai-relevance">相关度: ${m.relevance}</span>`;
+    viewHtml+=`<div class="ai-title">${m.title}</div>`;
+    viewHtml+=`<div class="ai-summary">${m.summary}</div>`;
     if(m.points&&m.points.length){
-      html+='<ul class="ai-points">';
-      m.points.forEach(p=>html+=`<li>${p}</li>`);
-      html+='</ul>';
+      viewHtml+='<ul class="ai-points">';
+      m.points.forEach(p=>viewHtml+=`<li>${p}</li>`);
+      viewHtml+='</ul>';
     }
-    if(m.quote)html+=`<div class="ai-quote">${m.quote}</div>`;
-    if(m.data)html+=`<div><span class="ai-data">📊 ${m.data}</span></div>`;
-    html+=`<div class="ai-src">📎 ${m.src}</div>`;
-    html+=`<div class="ai-use-btn" onclick="openEditor(${idx})">✏️ 引用编辑</div>`;
-    card.innerHTML=html;
+    if(m.quote)viewHtml+=`<div class="ai-quote">${m.quote}</div>`;
+    if(m.data)viewHtml+=`<div><span class="ai-data">📊 ${m.data}</span></div>`;
+    viewHtml+=`<div class="ai-src">📎 ${m.src}</div>`;
+    viewHtml+=`<div class="ai-use-btn" onclick="startEditCard(${idx})">✏️ 引用编辑</div>`;
+    viewHtml+='</div>';
+    // Edit mode
+    viewHtml+=`<div class="ai-card-edit">
+      <div style="font-size:10px;color:#B8901E;font-weight:700;margin-bottom:4px">✏️ 编辑后发送到讨论</div>
+      <textarea id="ai-card-textarea-${idx}"></textarea>
+      <div class="edit-actions">
+        <button class="edit-cancel" onclick="cancelEditCard(${idx})">取消</button>
+        <button class="edit-send" onclick="sendEditCard(${idx})">发送</button>
+      </div>
+    </div>`;
+    card.innerHTML=viewHtml;
     container.appendChild(card);
   });
   document.getElementById('ai-sidebar').classList.add('show');
 }
 
-// ═══ Card Editor ═══
+// ═══ Inline Card Edit ═══
 function buildEditorDraft(m){
   let draft='';
   if(m.points&&m.points.length){
@@ -605,22 +683,25 @@ function buildEditorDraft(m){
   return draft.trim();
 }
 
-function openEditor(idx){
-  const m=aiMaterials[idx];
-  document.getElementById('ai-editor-src').textContent=`引用自: ${m.tag} · ${m.title}`;
-  document.getElementById('ai-editor-text').value=buildEditorDraft(m);
-  document.getElementById('ai-editor').classList.add('show');
-  setTimeout(()=>document.getElementById('ai-editor-text').focus(),100);
+function startEditCard(idx){
+  // Close any other editing card
+  document.querySelectorAll('.ai-card.editing').forEach(c=>c.classList.remove('editing'));
+  const card=document.getElementById('ai-card-'+idx);
+  card.classList.add('editing');
+  const textarea=document.getElementById('ai-card-textarea-'+idx);
+  textarea.value=buildEditorDraft(aiMaterials[idx]);
+  setTimeout(()=>{textarea.focus();card.scrollIntoView({behavior:'smooth',block:'center'})},100);
 }
 
-function closeEditor(){
-  document.getElementById('ai-editor').classList.remove('show');
+function cancelEditCard(idx){
+  document.getElementById('ai-card-'+idx).classList.remove('editing');
 }
 
-function sendFromEditor(){
-  const text=document.getElementById('ai-editor-text').value.trim();
+function sendEditCard(idx){
+  const textarea=document.getElementById('ai-card-textarea-'+idx);
+  const text=textarea.value.trim();
   if(!text)return;
-  closeEditor();
+  document.getElementById('ai-card-'+idx).classList.remove('editing');
   document.getElementById('ai-sidebar').classList.remove('show');
   addMsg('',text,true);msgCount++;
   checkInsightCard();
@@ -947,6 +1028,42 @@ function send(){
   });
 }
 mi.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+
+// ═══ Character Click - Profile Card ═══
+const charProfiles=[
+  {name:'阿哲',role:'系统策划',expertise:['数值设计','系统架构','数据分析'],contributions:12,quote:'光靠感觉判断容易踩坑，关键还是要看底层数据。'},
+  {name:'小棠',role:'关卡策划',expertise:['关卡设计','用户测试','项目管理'],contributions:9,quote:'建议先做个小规模验证，别一上来就铺开。'},
+  {name:'青叶',role:'体验设计',expertise:['玩家体验','竞品分析','付费设计'],contributions:15,quote:'核心是把"爽感"做到位，数据自然就来了。'},
+  {name:'言午',role:'技术策划',expertise:['工作流优化','工具开发','流派设计'],contributions:8,quote:'通用流派不是偷懒，是给玩家留了自己组合搭配的空间。'},
+  {name:'蓝山',role:'市场策划',expertise:['行业趋势','用户研究','品类分析'],contributions:11,quote:'不同用户群体的接受度差异很大，不能一概而论。'},
+];
+
+const charPositions=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
+
+c.addEventListener('click',(e)=>{
+  const r=c.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
+  const mx=(e.clientX-r.left)*sx,my=(e.clientY-r.top)*sy;
+  for(let i=charPositions.length-1;i>=0;i--){
+    const cp=charPositions[i],dx=mx-cp.x,dy=my-(cp.y-30);
+    if(dx*dx+dy*dy<35*35){showProfile(i);return}
+  }
+  closeProfile();
+});
+
+function showProfile(idx){
+  const p=charProfiles[idx];
+  document.getElementById('cp-name').textContent=p.name+' · '+p.role;
+  let html='';
+  html+=`<div style="margin-bottom:4px">`+p.expertise.map(e=>`<span class="cp-tag">${e}</span>`).join('')+'</div>';
+  html+=`<div style="font-style:italic;color:#5C4033;margin:4px 0">"${p.quote}"</div>`;
+  html+=`<div class="cp-stat">历史贡献: ${p.contributions}次讨论参与</div>`;
+  document.getElementById('cp-body').innerHTML=html;
+  document.getElementById('char-profile').classList.add('show');
+}
+
+function closeProfile(){
+  document.getElementById('char-profile').classList.remove('show');
+}
 
 // ═══ Main Loop ═══
 function tick(){frame++;drawScene(frame);requestAnimationFrame(tick)}tick();
