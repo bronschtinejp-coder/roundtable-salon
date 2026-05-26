@@ -197,7 +197,11 @@ function removeTyping(){
 function addMentorAnswer(title,bullets,data){
   const d=document.createElement('div');d.className='msg mt-a';
   let html='<div class="ans-title">'+title+'</div>';
-  if(bullets&&bullets.length){html+='<ul class="ans-bullets">';bullets.forEach(b=>{html+='<li>'+b+'</li>'});html+='</ul>';}
+  if(bullets&&bullets.length){
+    html+='<div style="margin:6px 0">';
+    bullets.forEach(b=>{html+='<div style="margin-bottom:8px;line-height:1.7">'+b+'</div>'});
+    html+='</div>';
+  }
   if(data)html+='<div style="margin-top:4px"><span class="ans-data">📊 '+data+'</span></div>';
   html+='<div class="tm">'+now()+'</div>';
   d.innerHTML=html;
@@ -237,15 +241,49 @@ function addSendBtn(){
   msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
 
-function addEssenceCard(){
+function addEssenceCard(drafts){
   const d=document.createElement('div');d.className='msg essence-card';
-  d.innerHTML='<div class="essence-hdr">✨ AI精华卡片 · 本次问答核心洞察</div><div class="essence-body">'+
-    '<div style="margin-bottom:10px"><span class="es-label">核心要点：</span>抽签/Roguelike融合的成功前提是底层玩法循环本身足够有趣。随机机制只能放大已有的乐趣，不能创造新的乐趣。设计时需要把随机性限定在"构建"阶段（选流派、走路线），而不是"执行"阶段（战斗过程），让玩家保持掌控感。</div>'+
-    '<div style="margin-bottom:10px"><span class="es-label">关键案例：</span>《星渊纪元》最初为40个角色各设计专属流派（工作量120人周），后改为5个通用流派（工作量20人周），工作量减少约80%。通用流派不绑定角色，玩家自由搭配组合，意外成为社区讨论热点。</div>'+
-    '<div style="margin-bottom:10px"><span class="es-label">数据支撑：</span>切换通用流派后社区讨论量+40%，7日留存+8%。主要原因是玩家产生"还有很多流派没试过"的探索动力，自发产出大量攻略和测评内容。</div>'+
-    '<div style="margin-bottom:10px"><span class="es-label">适用场景：</span>中小团队、角色数量多的产品优先考虑通用流派方案。需要注意通用流派间的强度平衡比专属流派更难调（组合数爆炸），建议采用"强度预算系统"控制。</div>'+
-    '<div style="margin-bottom:6px"><span class="es-label">决策建议：</span>1) 先验证核心玩法循环是否有趣；2) 确认后再引入随机构建要素；3) 优先通用流派降低工作量；4) 用预算系统兜底平衡问题。</div>'+
-    '</div>';
+  const allText=(drafts||[]).join(' ');
+
+  // Build sections dynamically - only include dimensions that have real content
+  let sections=[];
+
+  // Core point (always present if there's any content)
+  if(allText.match(/构建.*阶段|限定在|放大器|核心玩法/)){
+    sections.push({label:'核心要点',text:'设计时需要把随机性限定在"构建"阶段（选流派、走路线），而不是"执行"阶段（战斗过程），让玩家保持掌控感。抽签机制只是放大器，核心玩法有趣是前提。'});
+  }else if(allText.length>20){
+    sections.push({label:'核心要点',text:'抽签/Roguelike融合的成功前提是底层玩法循环本身足够有趣。随机机制只能放大已有的乐趣，不能创造新的乐趣。'});
+  }
+
+  // Case (only if mentioned specific project)
+  if(allText.match(/《星渊纪元》/)){
+    sections.push({label:'关键案例',text:'《星渊纪元》从40角色专属流派 → 5个通用流派，将角色专属设计改为通用构建+角色天赋的混合模式，大幅降低工作量的同时保留了角色辨识度。'});
+  }
+
+  // Data (only if has concrete numbers)
+  if(allText.match(/40%|8%|20人周/)){
+    sections.push({label:'数据支撑',text:'社区讨论量+40%，7日留存+8%，工作量从120人周降至20人周（减少约80%）。玩家探索动力增强，自发产出攻略内容。'});
+  }
+
+  // Boundary (only if discusses applicability)
+  if(allText.match(/适合|前提|注意|坑|预算/)){
+    sections.push({label:'适用场景',text:'适合中小团队、角色数量多（20+）的产品。前提条件：底层玩法本身有趣。注意事项：通用流派间强度平衡难度高，建议用预算系统兜底。'});
+  }
+
+  // Suggestion (always add a brief one)
+  if(sections.length>0){
+    let sugText='建议先验证核心玩法循环是否有趣，确认后再引入随机构建要素。';
+    if(allText.match(/通用流派/))sugText+='优先考虑通用流派方案降低工作量。';
+    if(allText.match(/预算/))sugText+='用预算系统控制平衡问题。';
+    sections.push({label:'决策建议',text:sugText});
+  }
+
+  let bodyHtml='';
+  sections.forEach((s,i)=>{
+    bodyHtml+='<div style="margin-bottom:'+(i<sections.length-1?'10':'6')+'px"><span class="es-label">'+s.label+'：</span>'+s.text+'</div>';
+  });
+
+  d.innerHTML='<div class="essence-hdr">✨ AI精华卡片 · 本次问答核心洞察</div><div class="essence-body">'+bodyHtml+'</div>';
   msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
 
@@ -375,7 +413,7 @@ function cancelEditKB(idx){
 
 function sendEditKB(idx){
   const editArea=document.getElementById('kb-edit-'+idx);
-  const text=editArea.textContent.trim();
+  const text=(editArea.innerText||editArea.textContent||'').trim();
   if(!text)return;
   toggleKBSidebar();
   // Use the shared advance function
@@ -400,7 +438,7 @@ function renderNewbieView(){
     if(m.type==='question')addNewbieMsg(m.content);
     else if(m.type==='typing')addTyping(m.content);
     else if(m.type==='answer')addMentorAnswer(m.title,m.bullets,m.data);
-    else if(m.type==='essence')addEssenceCard();
+    else if(m.type==='essence')addEssenceCard(m.drafts);
   });
 }
 
@@ -419,13 +457,17 @@ function renderMentorView(){
 // Demo Auto-Play
 // ═══════════════════════════════════
 function sendAnswer(){
+  // Capture any unsent text still in the input box
+  const unsent=getInputText();
+  if(unsent){allDrafts.push(unsent);mi.innerHTML='';}
   // Send all drafts as the final answer to newbie
   newbieMsgs=newbieMsgs.filter(m=>m.type!=='typing');
+  const sentDrafts=allDrafts.slice();
   newbieMsgs.push({
     type:'answer',
     title:'抽签/通用流派融合的实践经验',
-    bullets:allDrafts.slice(),
-    data:'社区讨论量+40%，7日留存+8%，工作量从120人周降至20人周'
+    bullets:sentDrafts,
+    data:''
   });
   mentorHasBulb=false;mentorActive=false;
   isMentorView=false;
@@ -438,9 +480,9 @@ function sendAnswer(){
   document.getElementById('kb-overlay').classList.remove('show');
   demoPhase='sent';
   renderView();
-  // After a delay, show essence card
+  // After a delay, show essence card based on actual content sent
   setTimeout(()=>{
-    newbieMsgs.push({type:'essence'});
+    newbieMsgs.push({type:'essence',drafts:sentDrafts});
     demoPhase='done';
     renderView();
   },2000);
@@ -503,8 +545,11 @@ function initDemo(){
 
 mi.addEventListener('click',function(){
   if(!isMentorView)return;
-  if(demoPhase==='mentor_drafting' && draftStep < PRESET_DRAFTS.length && mi.textContent.trim()===''){
+  if(demoPhase==='mentor_drafting' && draftStep < PRESET_DRAFTS.length && getInputText()===''){
     mi.textContent=PRESET_DRAFTS[draftStep];
+    // Move cursor to end
+    const range=document.createRange();range.selectNodeContents(mi);range.collapse(false);
+    const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
   }
 });
 
@@ -590,8 +635,10 @@ function advanceMentorDraft(text){
   },800);
 }
 
+function getInputText(){return (mi.innerText||mi.textContent||'').trim()}
+
 function handleSendClick(){
-  const text=mi.textContent.trim();if(!text)return;mi.innerHTML='';
+  const text=getInputText();if(!text)return;mi.innerHTML='';
   if(!isMentorView)return;
   advanceMentorDraft(text);
 }
