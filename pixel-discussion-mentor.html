@@ -38,8 +38,11 @@ body{background:#E8F0F8;font-family:'Microsoft YaHei UI','Microsoft YaHei','微�
 .msg.nb-question .nq-label{font-size:12px;color:#8B6B4A;margin-bottom:4px;font-weight:700}
 .msg.mt-draft{background:#3E2210;color:#F5E6C8;padding:10px 14px;border:2px solid #6B4226;border-radius:2px 2px 0 2px;font-size:13px;line-height:1.65;word-break:break-word;align-self:flex-end}
 .msg.mt-draft .draft-label{font-size:10px;color:#C8A080;margin-bottom:2px}
-.msg.ai-prompt{background:#FFF8E0;color:#2A1808;padding:10px 14px;border:2px solid #E8B830;border-left:3px solid #E8B830;font-size:13px;line-height:1.6;align-self:flex-start;border-radius:2px}
-.msg.ai-prompt .ai-label{font-size:12px;color:#B8901E;font-weight:700;margin-bottom:4px}
+.msg.ai-prompt{background:#FFFDE8;color:#2A1808;padding:12px 14px;border:1px solid #E8D5B0;border-left:3px solid #E8B830;font-size:12px;line-height:1.6;align-self:stretch;border-radius:2px;max-width:100%}
+.msg.ai-prompt .ai-label{font-size:11px;color:#B8901E;font-weight:700;margin-bottom:6px}
+.msg.ai-prompt .ai-suggest-item{display:inline-block;margin:3px 4px 3px 0;padding:4px 10px;background:#F5E6C8;border:1px solid #E8B830;border-radius:12px;font-size:11px;font-weight:700;color:#5C4033;cursor:pointer;transition:all 0.15s}
+.msg.ai-prompt .ai-suggest-item:hover{background:#E8B830;color:#2A1808}
+.msg.ai-prompt .ai-done{color:#2B5E3A;font-weight:700;font-size:12px}
 .msg.green-banner{background:#E8F8E8;border:2px solid #4CAF50;padding:10px 14px;font-size:13px;font-weight:700;color:#2D7A2D;text-align:center;align-self:stretch;border-radius:2px;animation:fIn .3s ease}
 .msg.send-btn-wrap{align-self:center;animation:fIn .3s ease}
 .send-btn{padding:8px 24px;border:2px solid #3E2210;background:#3E2210;color:#F5E6C8;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:1px;transition:all 0.15s}
@@ -98,6 +101,7 @@ body{background:#E8F0F8;font-family:'Microsoft YaHei UI','Microsoft YaHei','微�
     <div id="mi-rich" contenteditable="true" data-placeholder="输入你的问题..."></div>
     <button id="kb-btn" class="kb-btn" style="display:none" onclick="toggleKBSidebar()">💡</button>
     <button id="send-btn-text" onclick="handleSendClick()">提问</button>
+    <button id="send-to-newbie-btn" style="display:none;background:#2B5E3A;border-color:#2B5E3A;color:#FFF" onclick="handleSendToNewbie()">📤 发送给新人</button>
   </div>
 </div>
 </div>
@@ -405,6 +409,7 @@ function renderMentorView(){
     if(m.type==='question')addNewbieQuestionInMentorView(m.content);
     else if(m.type==='draft'){mentorActive=true;mentorHasBulb=true;addMentorDraft(m.content)}
     else if(m.type==='ai'){mentorHasBulb=false;mentorActive=false;addAIQuestion(m.content)}
+    else if(m.type==='suggestion'){mentorHasBulb=false;mentorActive=false;addAISuggestionCard(m.data)}
     else if(m.type==='banner')addGreenBanner(m.content);
     else if(m.type==='sendbtn')addSendBtn();
   });
@@ -414,25 +419,21 @@ function renderMentorView(){
 // Demo Auto-Play
 // ═══════════════════════════════════
 function sendAnswer(){
-  // Format and send the answer from mentor to newbie
-  removeSendBtn();
-  // Remove banner and sendbtn from mentor msgs
-  mentorMsgs=mentorMsgs.filter(m=>m.type!=='banner'&&m.type!=='sendbtn');
-  // Add final answer to newbie view (full drafts, not condensed)
+  // Send all drafts as the final answer to newbie
   newbieMsgs=newbieMsgs.filter(m=>m.type!=='typing');
   newbieMsgs.push({
     type:'answer',
-    title:currentAnswerTitle,
-    bullets:currentAnswerBullets,
-    data:currentAnswerData
+    title:'抽签/通用流派融合的实践经验',
+    bullets:allDrafts.slice(),
+    data:'社区讨论量+40%，7日留存+8%，工作量从120人周降至20人周'
   });
-  currentAnswerTitle='';currentAnswerBullets=[];currentAnswerData='';
   mentorHasBulb=false;mentorActive=false;
   isMentorView=false;
   document.getElementById('view-toggle').textContent='切换视角: 导师';
   document.getElementById('view-toggle').className='newbie';
   document.getElementById('kb-btn').style.display='none';
   document.getElementById('send-btn-text').textContent='提问';
+  document.getElementById('send-to-newbie-btn').style.display='none';
   mi.setAttribute('data-placeholder','输入你的问题...');
   document.getElementById('kb-overlay').classList.remove('show');
   demoPhase='sent';
@@ -452,93 +453,163 @@ function removeSendBtn(){
   if(el)el.remove();
 }
 
-let currentAnswerTitle='',currentAnswerBullets=[],currentAnswerData='';
-
 // ═══════════════════════════════════
-// Interactive Demo (Manual Steps)
+// Interactive Demo (Manual Steps) - v3.1 Inline Suggestion Model
 // ═══════════════════════════════════
 const PRESET_DRAFTS=[
-  '我觉得这个问题的关键在于——抽签玩法本身不是救命稻草，它只是一个放大器。如果底层玩法本身不够有趣，加了抽签也只是把一个不好玩的东西变得更复杂。所以第一步一定要先确保核心玩法循环足够有趣，然后再考虑在哪个环节加入随机要素。我们当时的经验是把随机性限定在"构建"阶段（选流派/走建筑），而不是"执行"阶段（战斗过程），这样玩家觉得自己有控制感。',
-  '我们《星渊纪元》最初的方案是给40多个角色每个都做专属流派，想法很美好，但实操下来工作量完全爆炸——平均每个角色要花3人周设计、测试、调平衡，40个就是120人周。后来我们反复讨论后决定大刀阔斧，把角色专属流派砍掉，改做5个"通用流派"，每个流派不绑定特定角色，玩家可以自由组合搭配。这个决策当时内部争议很大，但结果证明了"通用流派"不仅不是偷懒，反而给了玩家更多自由度。',
+  '我觉得这个问题的关键在于——抽签玩法本身不是救命稻草，它只是一个放大器。如果底层玩法本身不够有趣，加了抽签也只是把一个不好玩的东西变得更复杂。所以第一步一定要先确保核心玩法循环足够有趣，然后再考虑在哪个环节加入随机要素。我的经验是把随机性限定在"构建"阶段（选流派、走路线），而不是"执行"阶段（战斗过程），这样玩家觉得自己有控制感，不会觉得是"纯运气游戏"。',
+  '我们《星渊纪元》最初的方案是给40多个角色每个都做专属流派，想法很美好，但实操下来工作量完全爆炸——平均每个角色要花3人周设计、测试、调平衡，40个就是120人周。后来我们反复讨论后决定大刀阔斧，把角色专属流派砍掉，改做5个"通用流派"，每个流派不绑定特定角色，玩家可以自由组合搭配。这个决策当时内部争议很大，但结果证明了通用流派不仅不是偷懒，反而给了玩家更多自由度。',
   '上线后数据还是很明显的。切换到通用流派后，社区讨论量直接涨了差不多40%，主要是玩家开始自发研究"什么流派组合最强"、"流派克制关系"这类话题，自发产出各种攻略和测评。7日留存涨了8%，我们分析主要原因是玩家觉得"还有很多流派没试过"，有了探索动力。而且工作量大幅下降——5个通用流派总共花了20人周，和之前40个专属的120人周比，省了差不多80%。这也让我们可以把省下的人力投入到更重要的玩法迭代上。'
 ];
-const AI_QUESTIONS=[
-  '能举一个具体的项目案例吗？比如你们项目是怎么做的？',
-  '效果数据怎么样？留存和付费有变化吗？'
+
+// AI suggestion dimensions - these get "checked off" as mentor covers them
+const AI_DIMENSIONS=[
+  {id:'case',label:'📎 具体案例',
+   detail:'建议补充一个具体的项目案例，包括：做了什么决策、为什么这么做、过程中遇到了什么问题。真实案例比抽象建议更有说服力。',
+   fillText:'我们《星渊纪元》最初的方案是给40多个角色每个都做专属流派，想法很美好，但实操下来工作量完全爆炸——平均每个角色要花3人周设计、测试、调平衡，40个就是120人周。后来我们反复讨论后决定大刀阔斧，把角色专属流派砍掉，改做5个"通用流派"，每个流派不绑定特定角色，玩家可以自由组合搭配。这个决策当时内部争议很大，但结果证明了"通用流派"不仅不是偷懒，反而给了玩家更多自由度。',
+   covered:false},
+  {id:'data',label:'📊 效果数据',
+   detail:'如果有数据支撑会让答案更有力度。比如：留存变化、付费变化、社区反馈、工作量对比等。即使是大致数据也比没有好。',
+   fillText:'上线后数据还是很明显的。切换到通用流派后，社区讨论量直接涨了差不多40%，主要是玩家开始自发研究"什么流派组合最强"这类话题。7日留存涨了8%，我们分析主要原因是玩家觉得"还有很多流派没试过"，有了探索动力。工作量方面，5个通用流派总共花了20人周，比之前40个专属的120人周省了大概80%。',
+   covered:false},
+  {id:'boundary',label:'🎯 适用边界',
+   detail:'每个方案都有适用范围。建议说明：什么类型的项目/团队适合用这个方案？有什么前提条件？实施过程中有什么坑需要注意？',
+   fillText:'这个方案比较适合中小团队、角色数量多（20+）的产品。前提是底层玩法本身要有趣，抽签只是放大器。需要注意的坑：通用流派之间的强度平衡比专属流派更难调，因为组合数爆炸了。我们的解法是设置"强度预算系统"——每个模块有隐性成本值，组合总成本不能超标。',
+   covered:false},
 ];
-let draftStep=0; // which draft step we're at (0,1,2)
-let demoPhase='newbie_q'; // newbie_q -> mentor_drafting -> ai_asking -> ready -> sent -> done
+
+let draftStep=0;
+let demoPhase='newbie_q';
+let allDrafts=[];
 
 function initDemo(){
-  // Start: show newbie question, already in mentor view
   newbieMsgs.push({type:'question',content:'抽签玩法怎么融合到我们的项目里比较好？想听听有经验的前辈的建议'});
   newbieMsgs.push({type:'typing',content:'导师正在整理回答...'});
-  // Switch to mentor view
   isMentorView=true;
   document.getElementById('view-toggle').textContent='切换视角: 新人';
   document.getElementById('view-toggle').className='mentor';
   document.getElementById('kb-btn').style.display='';
-  document.getElementById('send-btn-text').textContent='发送';
+  document.getElementById('send-btn-text').textContent='发送草稿';
+  document.getElementById('send-to-newbie-btn').style.display='';
   mi.setAttribute('data-placeholder','点击此处自动填入回复内容...');
   mentorMsgs=[];
   mentorMsgs.push({type:'question',content:'抽签玩法怎么融合到我们的项目里比较好？想听听有经验的前辈的建议'});
   demoPhase='mentor_drafting';
   draftStep=0;
+  allDrafts=[];
+  AI_DIMENSIONS.forEach(d=>{d.covered=false;});
   renderView();
 }
 
-// Click on input area to auto-fill preset text
 mi.addEventListener('click',function(){
   if(!isMentorView)return;
-  if(demoPhase==='mentor_drafting' && draftStep < PRESET_DRAFTS.length){
+  if(demoPhase==='mentor_drafting' && draftStep < PRESET_DRAFTS.length && mi.textContent.trim()===''){
     mi.textContent=PRESET_DRAFTS[draftStep];
   }
 });
 
+function buildSuggestionCard(){
+  // Progressive detection: each draft ideally covers one dimension
+  const allText=allDrafts.join(' ');
+  // Case: covered when BOTH project name AND specific decision details appear
+  if(allText.match(/《星渊纪元》/) && allText.match(/专属流派.*通用流派|通用流派.*专属流派/))AI_DIMENSIONS[0].covered=true;
+  // Data: covered when concrete percentages/numbers about results appear
+  if(allText.match(/讨论量.*40%|留存.*8%|20人周/))AI_DIMENSIONS[1].covered=true;
+  // Boundary: covered when discusses applicability or caveats
+  if(allText.match(/适合.*团队|前提.*有趣|预算系统|强度平衡/))AI_DIMENSIONS[2].covered=true;
+
+  const allCovered=AI_DIMENSIONS.every(d=>d.covered);
+  if(allCovered){
+    return {type:'ai-done',content:'✅ 你的回答已经很完整了，包含了观点、案例和数据支撑。建议可以发送给新同学了！'};
+  }
+  return {type:'ai-suggest',dimensions:AI_DIMENSIONS};
+}
+
+let suggestCardCounter=0;
+
+function addAISuggestionCard(suggestion){
+  suggestCardCounter++;
+  const sid=suggestCardCounter;
+  const d=document.createElement('div');d.className='msg ai-prompt';
+  if(suggestion.type==='ai-done'){
+    d.innerHTML='<div class="ai-label">💡 AI 助手</div><div class="ai-done">'+suggestion.content+'</div>';
+  }else{
+    let html='<div class="ai-label">💡 你的回答目前不错，还可以考虑补充——</div><div style="margin-bottom:6px">';
+    suggestion.dimensions.forEach(dim=>{
+      if(dim.covered){
+        html+='<span style="display:inline-block;margin:3px 4px 3px 0;padding:4px 10px;background:#E8F8E8;border:1px solid #4CAF50;border-radius:12px;font-size:11px;color:#2B5E3A;opacity:0.7">✓ '+dim.label.replace(/📎|📊|🎯/g,'').trim()+'</span>';
+      }else{
+        html+='<span class="ai-suggest-item" onclick="expandSuggestion('+sid+',\''+dim.id+'\')">'+dim.label+'</span>';
+      }
+    });
+    html+='</div>';
+    suggestion.dimensions.filter(dd=>!dd.covered).forEach(dim=>{
+      html+='<div id="sd-'+sid+'-'+dim.id+'" style="display:none;margin:6px 0;padding:8px 10px;background:#FFF;border:1px solid #E8D5B0;border-radius:2px;font-size:11px;line-height:1.6">';
+      html+='<div style="font-weight:700;color:#5C4033;margin-bottom:4px">'+dim.label+' — 补充建议</div>';
+      html+='<div style="color:#2A1808;margin-bottom:6px">'+dim.detail+'</div>';
+      html+='<button style="padding:4px 12px;font-size:10px;font-weight:700;background:#E8B830;border:1px solid #E8B830;color:#2A1808;cursor:pointer" onclick="fillSuggestion(\''+dim.id+'\')">填入输入框</button>';
+      html+='</div>';
+    });
+    html+='<div style="font-size:10px;color:#8B6B4A;margin-top:4px">点击标签查看详细建议，或直接忽略继续发送</div>';
+    d.innerHTML=html;
+  }
+  msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+}
+
+function expandSuggestion(sid,dimId){
+  const detail=document.getElementById('sd-'+sid+'-'+dimId);
+  if(detail){
+    detail.style.display=detail.style.display==='none'?'block':'none';
+    msgsEl.scrollTop=msgsEl.scrollHeight;
+  }
+}
+
+function fillSuggestion(dimId){
+  const dim=AI_DIMENSIONS.find(d=>d.id===dimId);
+  if(dim&&dim.fillText){
+    mi.textContent=dim.fillText;
+  }
+  mi.focus();
+}
+
 function advanceMentorDraft(text){
   if(demoPhase!=='mentor_drafting')return;
-  // Mentor sends a draft
   mentorMsgs.push({type:'draft',content:text});
+  allDrafts.push(text);
   mentorActive=true;mentorHasBulb=true;
   draftStep++;
   renderView();
 
-  // After all 3 drafts sent, show green banner
-  if(draftStep >= PRESET_DRAFTS.length){
-    setTimeout(()=>{
-      mentorHasBulb=false;mentorActive=false;
-      mentorMsgs.push({type:'banner',content:'回答已包含观点、案例和数据，结构清晰，可以发送给新人了'});
-      mentorMsgs.push({type:'sendbtn'});
-      demoPhase='ready';
-      currentAnswerTitle='抽签/通用流派融合的实践经验';
-      currentAnswerBullets=PRESET_DRAFTS.slice();
-      currentAnswerData='社区讨论量+40%，7日留存+8%，工作量从120人周降至20人周';
-      renderView();
-    },1500);
-  } else if(draftStep <= AI_QUESTIONS.length){
-    // AI asks follow-up
-    setTimeout(()=>{
-      mentorHasBulb=false;mentorActive=false;
-      mentorMsgs.push({type:'ai',content:AI_QUESTIONS[draftStep-1]});
-      renderView();
-      mi.setAttribute('data-placeholder','点击此处自动填入回复内容...');
-    },1200);
-  }
+  // After a short delay, show AI suggestion card
+  setTimeout(()=>{
+    mentorHasBulb=false;mentorActive=false;
+    const suggestion=buildSuggestionCard();
+    mentorMsgs.push({type:'suggestion',data:suggestion});
+    renderView();
+    mi.setAttribute('data-placeholder','点击此处自动填入回复内容...');
+  },800);
 }
 
 function handleSendClick(){
   const text=mi.textContent.trim();if(!text)return;mi.innerHTML='';
-
-  if(!isMentorView){
-    return;
-  }
-
+  if(!isMentorView)return;
   advanceMentorDraft(text);
+}
+
+function handleSendToNewbie(){
+  // Check if missing dimensions - soft confirmation
+  const uncovered=AI_DIMENSIONS.filter(d=>!d.covered);
+  if(uncovered.length>0){
+    const missing=uncovered.map(d=>d.label).join('、');
+    if(!confirm('你的回答还缺少'+missing+'相关内容，确定发送吗？')){
+      return;
+    }
+  }
+  sendAnswer();
 }
 
 mi.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSendClick()}});
 
-// Start
 setTimeout(initDemo,600);
 </script>
 </body>
