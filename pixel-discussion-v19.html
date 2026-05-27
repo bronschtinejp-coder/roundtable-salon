@@ -6,10 +6,10 @@
 <title>回响圆桌 · 讨论中</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#1a1220;font-family:'Microsoft YaHei','微软雅黑',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
-  #container{width:100vw;height:100vh;max-width:1280px;max-height:720px;aspect-ratio:16/9;display:flex;border:3px solid #3E2210;box-shadow:0 0 40px rgba(0,0,0,0.5)}
+  body{background:#E8F0F8;font-family:'Microsoft YaHei','微软雅黑',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  #container{width:100vw;height:100vh;max-width:1280px;max-height:720px;aspect-ratio:16/9;display:flex;border:2px solid #C8D0D8;box-shadow:0 4px 24px rgba(0,40,80,0.1)}
   /* Left: scene */
-  #scene{flex:0 0 30%;position:relative;background:#2A1808}
+  #scene{flex:0 0 30%;position:relative;background:#F0F4F8}
   #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
   #back{position:absolute;top:8px;left:8px;z-index:5;background:#3E2210;border:2px solid #E8B830;color:#F5E6C8;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer;transition:all 0.15s}
   #back:hover{background:#E8B830;color:#2A1808;border-color:#FFD84D}
@@ -66,6 +66,12 @@
   #ai-assist-btn{padding:9px 10px !important;letter-spacing:0 !important;font-size:14px !important;background:#E8D5B0 !important;border-color:#E8B830 !important;color:#B8901E !important}
   #ai-assist-btn:hover{background:#E8B830 !important;color:#2A1808 !important}
   #ai-assist-btn.active{background:#E8B830 !important;color:#2A1808 !important;box-shadow:0 0 6px rgba(232,184,48,0.4)}
+  #invite-btn{padding:9px 10px !important;letter-spacing:0 !important;font-size:13px !important;font-weight:700 !important;background:#E0F0FF !important;border-color:#4A8BC8 !important;color:#4A8BC8 !important}
+  #invite-btn:hover{background:#4A8BC8 !important;color:#FFF !important}
+  .invite-item{padding:6px 8px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:6px;border-radius:2px;margin:2px 0}
+  .invite-item:hover{background:#F0F7FF}
+  .invite-item .inv-dot{width:8px;height:8px;border-radius:50%}
+  .invite-item .inv-name{font-weight:700;color:#2D3748}
 
   /* ═══ AI Material Sidebar ═══ */
   #ai-sidebar{
@@ -228,7 +234,7 @@
 <div id="container">
 <div id="scene">
   <canvas id="c"></canvas>
-  <button id="back" onclick="history.back()">← 返回沙龙</button>
+  <button id="back" onclick="window.location.href='pixel-salon-v24.html'">← 返回沙龙</button>
   <div id="char-profile">
     <div class="cp-hdr">
       <span class="cp-name" id="cp-name"></span>
@@ -261,7 +267,16 @@
   <div id="inp-wrap">
     <div id="mi-rich" contenteditable="true" data-placeholder="第一行为观点标题（加粗），Shift+Enter换行写正文，Enter发送"></div>
     <button id="ai-assist-btn" onclick="toggleAISuggest()" title="AI 写作助手">💡</button>
+    <button id="invite-btn" onclick="toggleInvitePanel()" title="邀请同事参与">@</button>
     <button onclick="send()">发 言</button>
+  </div>
+
+  <!-- Invite Panel -->
+  <div id="invite-panel" style="display:none;position:absolute;bottom:72px;right:14px;z-index:16;background:#FFF;border:1px solid #C8D0D8;padding:0;width:200px;box-shadow:0 2px 8px rgba(0,40,80,0.1);animation:fIn .2s ease;border-radius:3px">
+    <div style="padding:8px 10px;background:#4A7BA8;color:#FFF;font-size:11px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-radius:3px 3px 0 0">
+      <span>@ 邀请同事参与</span><span style="cursor:pointer" onclick="toggleInvitePanel()">✕</span>
+    </div>
+    <div id="invite-list" style="padding:6px"></div>
   </div>
 
   <!-- Insight Card (appended at bottom of chat) -->
@@ -280,35 +295,51 @@ const W=384,H=720,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
 function sz(){const s=Math.min(scene.clientWidth/W,scene.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
 window.addEventListener('resize',sz);sz();
 function R(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(x|0,y|0,w|0,h|0)}
-const P={wall:'#5C4033',wallL:'#6B4E3D',wallD:'#4A3228',beam:'#3E2812',beamL:'#5A3E1E',trim:'#2E1A0C',wpDark:'#6B4E35',wallpaper:'#8B6B4A',wpLight:'#A07850',floor:'#8B6B4A',floorL:'#A07850',floorD:'#6B4E35',floorH:'#B8925E',wd:'#6B4226',wdL:'#8B5A36',wdD:'#3E2210',wdH:'#A0703C',stone:'#6B6B6B',stoneL:'#8A8A8A',stoneD:'#4A4A4A',fire1:'#FF6B2B',fire2:'#FFAA33',fire3:'#FFD84D',g1:'#2B5E3A',g2:'#3D8B4A',g3:'#5FB066',g4:'#8BC870',gold:'#E8B830',goldL:'#FFD84D',goldD:'#B8901E',red:'#C84040',redD:'#9B2828',blue:'#4A7BA8',rug:'#8B2020',rugG:'#CC8833',rugC:'#AA4420',rugEdge:'#4A0E0E',paper:'#F5E6C8',ink:'#2A1808',sky:'#3A5C8A',skyTop:'#1E3A5C',star:'#FFE8AA',moon:'#E8E0C0',warm:'rgba(255,200,100,',shadow:'rgba(20,10,5,'};
+const imgCache={};
+function loadImg(key,src){const im=new Image();im.src=src;imgCache[key]=im;return im}
+const SPR={
+  chars:['azhe','xiaotang','qingye','yanwu','lanshan'].map(n=>loadImg('char_'+n,'sprites/char_'+n+'.png')),
+  workstation:loadImg('workstation2','sprites/workstation2.png'),
+  programmer:loadImg('programmer','sprites/programmer_desk.png'),
+  artist:loadImg('artist','sprites/artist_desk.png'),
+  bookcase:loadImg('bookcase','sprites/bookcase.png'),
+  whiteboard:loadImg('whiteboard','sprites/whiteboard.png'),
+  plant:loadImg('plant','sprites/plant.png'),
+  coffee:loadImg('coffee','sprites/coffee.png'),
+};
+function D(img,x,y,w,h){if(img&&img.complete&&img.naturalWidth)ctx.drawImage(img,x|0,y|0,w|0,h|0)}
+const P={
+  bg:'#F0F4F8',wallTop:'#E8EEF4',wallBot:'#D8E0E8',floor:'#F5E6C8',floorB:'#EDD8B8',floorLine:'#D4C4A8',
+  wd:'#C89050',wdL:'#D8A060',wdD:'#A87040',
+  green:'#5CB85C',greenD:'#4A9B4A',
+  blue:'#4A8BC8',blueD:'#2868A0',
+  orange:'#F0A030',orangeD:'#D08820',
+  red:'#E05050',purple:'#8B6BB8',
+  ink:'#2D3748',inkL:'#4A5568',
+  paper:'#FFFFFF',panelBorder:'#C8D0D8',
+  shadow:'rgba(0,40,80,0.06)',warm:'rgba(74,139,200,',
+  skin:'#FFD8B0',
+  gold:'#F0A030',goldL:'#FFBB55',goldD:'#D08820',
+  fire1:'#F0A030',fire2:'#FFBB55',fire3:'#FFD84D',
+};
 const charColors=[
-  {name:'阿哲',sx:'#F4C9A8',hr:'#2D1B0E',hr2:'#4A2C18',hrStyle:'spiky',top:'#264653',t2:'#1D353F',bot:'#3D3D5C',acc:'#4A7BA8'},
-  {name:'小棠',sx:'#FDE0C8',hr:'#5C2E0A',hr2:'#7A3E18',hrStyle:'bob',top:'#C84040',t2:'#9B2828',bot:'#4A4A6A',acc:'#FFD84D'},
-  {name:'青叶',sx:'#F5D6B8',hr:'#1A1A2E',hr2:'#2E2E4A',hrStyle:'short',top:'#2B5E3A',t2:'#1B4332',bot:'#3A3A5A',acc:'#E8B830'},
-  {name:'言午',sx:'#EEBB99',hr:'#4A3520',hr2:'#6B4E30',hrStyle:'tied',top:'#E8B830',t2:'#B8901E',bot:'#3D3A4A',acc:'#C84040'},
-  {name:'蓝山',sx:'#F8D8C0',hr:'#2C1810',hr2:'#4A3020',hrStyle:'neat',top:'#4A7BA8',t2:'#2E5C80',bot:'#3A3A5A',acc:'#E8B830'},
+  {name:'阿哲',sprite:0},
+  {name:'小棠',sprite:1},
+  {name:'青叶',sprite:2},
+  {name:'言午',sprite:3},
+  {name:'蓝山',sprite:4},
 ];
 let frame=0,active=-1;
 
 function drawChar(cx,cy,ci,act,f){
-  const s=3.2,ox=cx-6*s,oy=cy-24*s;
+  const dy=act?-Math.abs(Math.sin(f*0.12))*2:0;
   ctx.save();
-  ctx.fillStyle=P.shadow+'0.1)';ctx.beginPath();ctx.ellipse(cx,cy+3,12,3.5,0,0,Math.PI*2);ctx.fill();
-  R(ox+3*s,oy+18*s,3*s,7*s,ci.bot);R(ox+8*s,oy+18*s,3*s,7*s,ci.bot);R(ox+2.5*s,oy+24.5*s,4*s,2*s,'#2A1A0E');R(ox+7.5*s,oy+24.5*s,4*s,2*s,'#2A1A0E');
-  R(ox+2*s,oy+10*s,10*s,9*s,ci.top);R(ox+2*s,oy+16*s,10*s,2*s,ci.t2);R(ox+5*s,oy+10*s,4*s,2*s,ci.sx);R(ox+2.5*s,oy+17.5*s,9*s,1.5*s,ci.acc);
-  if(act){R(ox+0.5*s,oy+9*s,2.5*s,8*s,ci.top);R(ox+11*s,oy+8*s,2.5*s,8*s,ci.top);R(ox+0.5*s,oy+16.5*s,2.5*s,2*s,ci.sx);R(ox+11*s,oy+15.5*s,2.5*s,2*s,ci.sx)}
-  else{R(ox+0.5*s,oy+10*s,2.5*s,7*s,ci.top);R(ox+11*s,oy+10*s,2.5*s,7*s,ci.top);R(ox+0.5*s,oy+16.5*s,2.5*s,2*s,ci.sx);R(ox+11*s,oy+16.5*s,2.5*s,2*s,ci.sx)}
-  R(ox+1*s,oy,12*s,6*s,ci.hr);R(ox+2.5*s,oy+2*s,9*s,7*s,ci.sx);
-  if(ci.hrStyle==='spiky'){R(ox+1*s,oy-2*s,12*s,4*s,ci.hr2);R(ox+3*s,oy-3*s,3*s,3*s,ci.hr);R(ox+7*s,oy-3.5*s,3*s,3*s,ci.hr);R(ox+10*s,oy-2*s,2*s,2*s,ci.hr)}
-  else if(ci.hrStyle==='bob'){R(ox+0.5*s,oy-1*s,13*s,5*s,ci.hr2);R(ox+0.5*s,oy+3*s,3*s,5*s,ci.hr);R(ox+10.5*s,oy+3*s,3*s,5*s,ci.hr);R(ox+4*s,oy-1*s,6*s,2*s,ci.hr2)}
-  else if(ci.hrStyle==='short'){R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);R(ox+1*s,oy+2*s,2*s,3*s,ci.hr)}
-  else if(ci.hrStyle==='tied'){R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);R(ox+11*s,oy+2*s,3*s,8*s,ci.hr);R(ox+12*s,oy+4*s,2*s,2*s,ci.acc)}
-  else if(ci.hrStyle==='neat'){R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);R(ox+2*s,oy+1*s,2*s,2*s,ci.hr);R(ox+10*s,oy+1*s,2*s,2*s,ci.hr)}
-  R(ox+4*s,oy+4*s,2.5*s,2.5*s,'#FFF');R(ox+8*s,oy+4*s,2.5*s,2.5*s,'#FFF');R(ox+4.5*s,oy+4.5*s,1.5*s,1.5*s,'#1A1A2E');R(ox+8.5*s,oy+4.5*s,1.5*s,1.5*s,'#1A1A2E');R(ox+5*s,oy+4*s,1*s,1*s,'#FFF');R(ox+9*s,oy+4*s,1*s,1*s,'#FFF');
-  R(ox+3*s,oy+6*s,2*s,1*s,'rgba(220,120,120,0.3)');R(ox+9*s,oy+6*s,2*s,1*s,'rgba(220,120,120,0.3)');R(ox+6*s,oy+7*s,2*s,1*s,'#8B5555');
-  if(Math.floor(f/160)%4===0&&f%160<4){R(ox+4*s,oy+4.5*s,2.5*s,1.5*s,ci.sx);R(ox+8*s,oy+4.5*s,2.5*s,1.5*s,ci.sx);R(ox+4*s,oy+5.5*s,2.5*s,1*s,'#2A1A0E');R(ox+8*s,oy+5.5*s,2.5*s,1*s,'#2A1A0E')}
-  if(act){ctx.strokeStyle=P.gold;ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(ox-3,oy-5,15*s,28*s,3);ctx.stroke();ctx.fillStyle=P.warm+'0.04)';ctx.beginPath();ctx.roundRect(ox-3,oy-5,15*s,28*s,3);ctx.fill();const bx2=cx-4,by2=oy-12;R(bx2-2,by2,12,8,P.paper);ctx.fillStyle=P.ink;ctx.font='6px "Microsoft YaHei"';ctx.fillText('...',bx2,by2+6)}
-  ctx.fillStyle=P.paper;ctx.font='bold 8px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(ci.name,cx,cy+8);ctx.textAlign='start';
+  ctx.fillStyle='rgba(0,0,0,0.08)';ctx.beginPath();ctx.ellipse(cx,cy+25,14,5,0,0,Math.PI*2);ctx.fill();
+  D(SPR.chars[ci.sprite||0],cx-22,cy-52+dy,44,88);
+  // Active glow
+  if(act){
+    // Active state uses only the lightbulb indicator; no selection outline.
+  }
   ctx.restore();
 }
 
@@ -343,8 +374,8 @@ function drawBulbIndicator(f){
     if(bulbTimer>=BULB_FADEOUT){bulbState='idle';return}
   }
   
-  const pos=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
-  const bx=pos[bulbCharIdx].x,by=pos[bulbCharIdx].y-92;
+  const pos=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
+  const bx=pos[bulbCharIdx].x,by=pos[bulbCharIdx].y-68;
   
   ctx.save();
   ctx.globalAlpha=alpha;
@@ -385,58 +416,30 @@ function drawBulbIndicator(f){
 }
 
 function drawScene(f){
-  // Room (384px wide)
-  R(0,0,W,280,P.wall);for(let y=20;y<280;y+=36){R(0,y,W,2,P.wallD);R(0,y+18,W,1,P.wallL+'44')}for(let x=0;x<W;x+=96)R(x,0,2,280,P.wallD);
-  R(0,268,W,14,P.beam);R(0,268,W,3,P.beamL);R(0,280,W,4,P.trim);
-  R(0,284,W,36,P.wpDark);for(let x=0;x<W;x+=64){R(x+3,288,58,28,P.wallpaper);R(x+6,292,52,20,P.wpLight)}R(0,318,W,4,P.trim);
-  R(0,322,W,H-322,P.floor);for(let y=322;y<H;y+=20){const off=(Math.floor((y-322)/20)%2)*40;for(let x=off;x<W;x+=80){R(x,y,80,20,((x+y)%160<80)?P.floorL:P.floor);R(x,y,80,2,P.floorH+'44');R(x,y+18,80,2,P.floorD);R(x,y,2,20,P.floorD+'88')}}
-  // Rug
-  const rx=40,ry=480,rw=304,rh=100;R(rx,ry,rw,rh,P.rugEdge);R(rx+4,ry+4,rw-8,rh-8,P.rug);R(rx+10,ry+10,rw-20,rh-20,P.rugC);R(rx+16,ry+16,rw-32,rh-32,P.rugG);R(rx+22,ry+22,rw-44,rh-44,P.rug);
-  for(let fx=rx+8;fx<rx+rw-8;fx+=10){R(fx,ry-3,3,4,P.rugG);R(fx,ry+rh-1,3,4,P.rugG)}
-  // Window (smaller, centered)
-  const wx=120,wy=40,ww=140,wh=160;R(wx-5,wy-5,ww+10,wh+10,P.wdD);R(wx-2,wy-2,ww+4,wh+4,P.wd);R(wx,wy,ww,wh,P.skyTop);R(wx,wy+wh/3,ww,wh/3,P.sky);R(wx,wy+2*wh/3,ww,wh/3,'#2A4A6A');
-  for(let i=0;i<8;i++){const sx2=wx+8+((i*43)%124),sy2=wy+6+((i*67)%70);const tw2=Math.sin(f*0.04+i*1.5)>0.2?2:1;R(sx2,sy2,tw2,tw2,P.star)}
-  ctx.fillStyle=P.moon;ctx.beginPath();ctx.arc(wx+ww-24,wy+24,10,0,Math.PI*2);ctx.fill();ctx.fillStyle=P.skyTop;ctx.beginPath();ctx.arc(wx+ww-19,wy+21,8,0,Math.PI*2);ctx.fill();
-  R(wx,wy+wh-24,ww,24,'#1A3328');R(wx+20,wy+wh-34,8,14,'#0D2218');R(wx+16,wy+wh-38,16,8,'#0D2218');R(wx+80,wy+wh-36,10,16,'#0D2218');R(wx+76,wy+wh-40,18,8,'#0D2218');
-  R(wx+ww/2-2,wy,3,wh,P.wdL);R(wx,wy+wh/2-2,ww,3,P.wdL);
-  R(wx-2,wy-2,12,wh+4,'#8B3030');R(wx+ww-10,wy-2,12,wh+4,'#8B3030');
-  // Candles
-  [30,350].forEach(cx2=>{R(cx2,180,8,6,P.goldD);R(cx2+2,178,4,3,P.gold);R(cx2+2,168,4,12,P.paper);const cfh=3+Math.sin(f*0.09+cx2)*1.2;ctx.fillStyle=P.fire2;ctx.beginPath();ctx.moveTo(cx2+2,168);ctx.quadraticCurveTo(cx2+4,168-cfh,cx2+6,168);ctx.fill();ctx.fillStyle=P.warm+'0.04)';ctx.beginPath();ctx.arc(cx2+4,174,14,0,Math.PI*2);ctx.fill()});
-  // Small bookshelf (right side)
-  R(340,320,36,130,P.wdD);R(343,323,30,124,P.wd);
-  for(let sy2=332;sy2<440;sy2+=30){R(343,sy2,30,3,P.wdD);const bkCols=['#C84040','#264653','#2B5E3A','#E8B830','#4A7BA8'];let bx2=346;while(bx2<368){const bw2=3+((bx2+sy2)%3),bh2=8+((bx2*7+sy2)%8);R(bx2,sy2+30-bh2,bw2,bh2,bkCols[(bx2+sy2)%5]);bx2+=bw2+1}}
-  // Small plant (left)
-  R(10,400,14,11,'#A05020');R(12,396,10,4,'#8B4018');R(12,384,3,14,P.g1);R(16,380,4,16,P.g2);R(20,386,3,10,P.g3);R(14,378,5,5,P.g4);
-  // Characters in arc (narrower canvas)
-  const positions=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
+  // Room - Game Dev Story bright office (384px wide)
+  R(0,0,W,210,'#FAF4E7');R(0,0,W,16,'#E6F1FA');for(let x=0;x<W;x+=28)R(x,16,16,2,'#D2E3F2');R(0,200,W,10,'#B88A58');R(0,207,W,3,'#8F663A');
+  // Cartoon pixel floor
+  R(0,210,W,H-210,'#E7BC78');
+  for(let y=210;y<H;y+=28){for(let x=0;x<W;x+=28){const alt=((x/28)+(y/28))%2===0;R(x,y,28,28,alt?'#EFCB91':'#E6B875');R(x+2,y+2,24,2,'rgba(255,255,255,0.16)');R(x,y+26,28,2,'#C99655');R(x+26,y,2,28,'#C99655')}}
+  // Sprite furniture
+  D(SPR.workstation,42,322,108,68);D(SPR.programmer,218,306,82,70);
+  D(SPR.workstation,108,430,108,68);D(SPR.artist,238,426,82,70);
+  D(SPR.coffee,336,374,34,44);
+  // Characters
+  const positions=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
   charColors.forEach((ci,i)=>{
     const isActive=i===active;
     const actBob=isActive?Math.sin(frame*0.12)*2:0;
     drawChar(positions[i].x,positions[i].y+actBob,ci,isActive,f);
-    // Active speaker: glow outline pulse + lightbulb popup
     if(isActive){
-      const cx2=positions[i].x,cy2=positions[i].y+actBob;
-      // Pulsing glow outline around character
-      const glowAlpha=0.4+Math.sin(f*0.08)*0.2;
-      ctx.strokeStyle=`rgba(232,184,48,${glowAlpha})`;
-      ctx.lineWidth=2;
-      ctx.beginPath();
-      ctx.roundRect(cx2-18,cy2-78,36,80,4);
-      ctx.stroke();
-      ctx.strokeStyle=`rgba(232,184,48,${glowAlpha*0.3})`;
-      ctx.lineWidth=4;
-      ctx.beginPath();
-      ctx.roundRect(cx2-20,cy2-80,40,84,6);
-      ctx.stroke();
+      // Active state is indicated only by the lightbulb; no blue selection frame.
     }
   });
-  // Anime-style lightbulb popup (single, lifecycle-based)
   drawBulbIndicator(f);
-  // Dust & vignette
-  for(let i=0;i<5;i++){const dx2=((f*0.3+i*60)%W),dy2=280+Math.sin(f*0.01+i*2)*40+i*25,da=0.15+Math.sin(f*0.02+i)*0.1;if(dy2>280&&dy2<H-40)R(dx2,dy2,2,2,P.warm+da+')')}
-  const vg=ctx.createRadialGradient(W/2,H/2,80,W/2,H/2,300);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(10,5,2,0.3)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   // Topic bar at bottom
-  const topic=params.get('topic')||'知识讨论';R(0,H-36,W,36,'rgba(42,24,8,0.8)');ctx.fillStyle=P.gold;ctx.font='bold 11px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(topic,W/2,H-14);ctx.textAlign='start';
+  const topic=params.get('topic')||'知识讨论';
+  R(0,H-32,W,32,'rgba(255,255,255,0.9)');R(0,H-32,W,2,'#C8D0D8');
+  ctx.fillStyle=P.ink;ctx.font='bold 11px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(topic,W/2,H-12);ctx.textAlign='start';
 }
 
 // ═══════════════════════════════════════
@@ -1100,7 +1103,7 @@ const charProfiles=[
   {name:'蓝山',role:'市场策划',expertise:['行业趋势','用户研究','品类分析'],contributions:11,quote:'不同用户群体的接受度差异很大，不能一概而论。'},
 ];
 
-const charPositions=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
+const charPositions=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
 
 c.addEventListener('click',(e)=>{
   const r=c.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
@@ -1125,6 +1128,46 @@ function showProfile(idx){
 
 function closeProfile(){
   document.getElementById('char-profile').classList.remove('show');
+}
+
+// ═══ Invite Feature ═══
+const inviteCandidates=[
+  {name:'白露',role:'体验设计',color:'#DD7799'},
+  {name:'阿哲',role:'系统策划',color:'#4488CC'},
+  {name:'小棠',role:'关卡策划',color:'#DD5555'},
+  {name:'青叶',role:'体验设计',color:'#55AA66'},
+  {name:'言午',role:'技术策划',color:'#EE9933'},
+  {name:'蓝山',role:'市场策划',color:'#8866AA'},
+  {name:'老陈',role:'主程',color:'#666'},
+  {name:'木鱼',role:'美术总监',color:'#CC7744'},
+];
+let inviteOpen=false;
+
+function toggleInvitePanel(){
+  inviteOpen=!inviteOpen;
+  const panel=document.getElementById('invite-panel');
+  if(inviteOpen){
+    panel.style.display='block';
+    const list=document.getElementById('invite-list');
+    list.innerHTML='';
+    inviteCandidates.forEach(c=>{
+      const d=document.createElement('div');d.className='invite-item';
+      d.innerHTML=`<span class="inv-dot" style="background:${c.color}"></span><span class="inv-name">${c.name}</span><span style="font-size:9px;color:#888">${c.role}</span>`;
+      d.onclick=()=>sendInvite(c);
+      list.appendChild(d);
+    });
+  }else{
+    panel.style.display='none';
+  }
+}
+
+function sendInvite(person){
+  toggleInvitePanel();
+  // Add system message to chat
+  const d=document.createElement('div');
+  d.className='msg other';d.setAttribute('data-char','系统');
+  d.innerHTML=`<div class="nm" style="color:#4A8BC8">📩 邀请通知</div><div class="bb" style="background:#F0F7FF;border-color:#C8D8E8;font-size:11px">你邀请了 <strong>${person.name}</strong>（${person.role}）参与本次讨论。对方将在通知栏收到提醒。</div><div class="tm">${now()}</div>`;
+  msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
 
 // ═══ Main Loop ═══

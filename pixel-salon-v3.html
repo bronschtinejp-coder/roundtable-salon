@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 知识沙龙</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');
+  
+  * { margin:0; padding:0; box-sizing:border-box; }
+  
+  body {
+    background: #3D2B1F;
+    font-family: 'Noto Sans SC', sans-serif;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  
+  #container {
+    position: relative;
+    width: 100vw; height: 100vh;
+    max-width: 1280px; max-height: 720px;
+    aspect-ratio: 16/9;
+  }
+  
+  #pixel-canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    border-radius: 4px;
+  }
+  
+  #title-bar {
+    position: absolute; top: 14px; left: 0; right: 0;
+    text-align: center; z-index: 10; pointer-events: none;
+    font-size: 16px; font-weight: 700; letter-spacing: 5px;
+    color: #3D2B1F;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="pixel-canvas"></canvas>
+  <div id="title-bar">回 响 圆 桌</div>
+</div>
+
+<script>
+const W=640, H=360;
+const cvs=document.getElementById('pixel-canvas');
+const ctx=cvs.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+
+function rz(){
+  const ct=document.getElementById('container');
+  const s=Math.min(ct.clientWidth/W, ct.clientHeight/H);
+  cvs.width=W; cvs.height=H;
+  cvs.style.width=(W*s)+'px';
+  cvs.style.height=(H*s)+'px';
+}
+window.addEventListener('resize',rz); rz();
+
+// ═══════════════════════════════════════════
+//  PIXEL ART PRIMITIVES
+// ═══════════════════════════════════════════
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x|0,y|0,w|0,h|0);}
+function L(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+function pixel(x,y,c){R(x,y,1,1,c);}
+
+// ═══════════════════════════════════════════
+//  COLOR PALETTE (Stardew inspired)
+// ═══════════════════════════════════════════
+const C={
+  // Room
+  wall:      '#F7EDD4',
+  wainscot:  '#E8D5B0',
+  wainTrim:  '#D4C090',
+  baseboard: '#C4B080',
+  floor:     '#C8945A',
+  floorDk:   '#B07838',
+  floorLine: '#A0682A',
+  // Rug
+  rug:       '#C84B31',
+  rugDk:     '#A03020',
+  rugGd:     '#E8A860',
+  rugWarm:   '#D4783E',
+  // Furniture
+  wood:      '#6B4226',
+  woodLt:    '#8B5E3C',
+  woodDk:    '#4A2C18',
+  // Board
+  board:     '#9C6644',
+  boardBg:   '#EDE0C8',
+  // Plants
+  green:     '#2D6A4F',
+  greenLt:   '#40916C',
+  greenY:    '#74A85A',
+  // Misc
+  gold:      '#D4A843',
+  paper:     '#FEFAE0',
+  red:       '#C84B31',
+  navy:      '#264653',
+  shadow:    'rgba(0,0,0,0.07)',
+};
+
+// ═══════════════════════════════════════════
+//  TOPICS
+// ═══════════════════════════════════════════
+const topics=[
+  {title:'抽签玩法融合的成与败',tag:'Roguelike'},
+  {title:'社交系统设计的得与失',tag:'社交'},
+  {title:'AI重塑关卡设计',tag:'AI+游戏'},
+  {title:'叙事与机制的边界',tag:'叙事'},
+  {title:'商业化体验平衡',tag:'商业化'},
+  {title:'开放世界内容密度',tag:'关卡'},
+];
+
+// ═══════════════════════════════════════════
+//  ROOM: wall, floor, rug
+// ═══════════════════════════════════════════
+function drawRoom(){
+  // Wall
+  R(0,0,W,120,C.wall);
+  // Wainscoting top trim
+  R(0,118,W,3,C.wainTrim);
+  // Wainscoting
+  R(0,120,W,10,C.wainscot);
+  // Baseboard
+  R(0,128,W,4,C.baseboard);
+  
+  // Floor - horizontal planks with varied widths
+  R(0,132,W,H-132,C.floor);
+  for(let y=132;y<H;y+=11){
+    L(0,y,W,y,C.floorLine,0.5);
+  }
+  // Vertical plank joints (offset per row for realism)
+  for(let row=0;row<22;row++){
+    const y=132+row*11;
+    const off=(row&1)?0:W/2;
+    for(let x=off;x<W;x+=90+Math.sin(row*1.7)*25){
+      if(x<W) L(x,y,x,y+11,C.floorDk,0.4);
+    }
+  }
+  
+  // Persian rug (center)
+  const rx=215, ry=275, rw=210, rh=55;
+  R(rx,ry,rw,rh,C.rug);
+  // Inner border
+  R(rx+3,ry+3,rw-6,rh-6,C.rugWarm);
+  R(rx+6,ry+6,rw-12,rh-12,C.rugGd);
+  // Center diamond pattern
+  for(let i=0;i<4;i++){
+    const dx=rx+40+i*42, dy=ry+27;
+    R(dx-8,dy-4,16,8,C.rug);
+    R(dx-6,dy-2,12,4,C.rugDk);
+  }
+  // Tassels
+  for(let tx=rx+10;tx<rx+rw-10;tx+=14){
+    R(tx,ry-3,1,3,C.rug); R(tx+2,ry-3,1,3,C.rug);
+    R(tx,ry+rh,1,3,C.rug); R(tx+2,ry+rh,1,3,C.rug);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  HOT TOPICS BOARD (wall only UI element)
+// ═══════════════════════════════════════════
+function drawBoard(){
+  const bx=12, by=14, bw=175, bh=108;
+  
+  // Frame
+  R(bx-4,by-4,bw+8,bh+8,C.woodDk);
+  R(bx,by,bw,bh,C.board);
+  // Cork surface
+  R(bx+4,by+4,bw-8,bh-8,C.boardBg);
+  
+  // Header
+  ctx.fillStyle=C.woodDk;
+  ctx.font='bold 10px "Noto Sans SC"';
+  ctx.fillText('🔥 本周热点推荐', bx+10, by+22);
+  L(bx+8,by+26,bx+bw-8,by+26,C.board,1);
+  
+  // Cards (2 columns x 3 rows)
+  topics.forEach((t,i)=>{
+    const col=i%2, row=Math.floor(i/2);
+    const cx=bx+12+col*82, cy=by+32+row*26;
+    const cw=76, ch=20;
+    
+    // Card
+    R(cx,cy,cw,ch,C.paper);
+    ctx.strokeStyle='#D4C4A0'; ctx.lineWidth=0.6;
+    ctx.strokeRect(cx,cy,cw,ch);
+    
+    // Pin
+    R(cx+cw/2-2,cy-1.5,4,3,C.red);
+    
+    // Title
+    ctx.fillStyle='#2D2D2D';
+    ctx.font='bold 8px "Noto Sans SC"';
+    const txt=t.title.length>9?t.title.slice(0,9)+'…':t.title;
+    ctx.fillText(txt, cx+4, cy+10);
+    
+    // Tag badge
+    ctx.fillStyle=C.red;
+    ctx.font='6px "Noto Sans SC"';
+    ctx.fillText('#'+t.tag, cx+4, cy+17);
+  });
+}
+
+// ═══════════════════════════════════════════
+//  FURNITURE (all on floor, nothing on wall)
+// ═══════════════════════════════════════════
+function drawBookshelf(x,y){
+  const w=32, h=44;
+  // Frame
+  R(x,y,w,h,C.woodDk);
+  R(x+2,y+2,w-4,h-4,C.wood);
+  // Shelves
+  for(let sy=y+6; sy<y+h-9; sy+=13){
+    R(x+2,sy,w-4,3,C.woodDk);
+    // Books
+    const bks=['#C84B31','#264653','#2D6A4F','#D4A843','#8B5E3C','#E76F51','#457B9D'];
+    for(let bx=x+4; bx<x+w-5; bx+=5){
+      const bh=4+((bx*13+sy*7)%5);
+      R(bx,sy+3,3,bh,bks[(bx+sy)%bks.length|0]);
+    }
+  }
+}
+
+function drawTable(x,y){
+  // Legs
+  R(x+3,y+0,3,14,C.woodDk);
+  R(x+44,y+0,3,14,C.woodDk);
+  // Top
+  R(x,y-18,50,18,C.wood);
+  R(x+2,y-16,46,14,C.woodLt);
+  // Items
+  R(x+6,y-21,12,5,C.paper);     // book
+  R(x+25,y-20,7,5,C.gold);      // mug
+  R(x+34,y-22,9,7,C.green);     // small plant pot
+}
+
+function drawPlant(x,y){
+  // Pot
+  R(x,y+14,14,11,'#BC6C25');
+  R(x+2,y+12,10,3,'#9C5A1C');
+  // Leaves (layered from back to front)
+  R(x+1,y+2,3,10,C.green);
+  R(x+4,y-1,4,13,C.greenLt);
+  R(x+7,y+2,3,10,C.green);
+  R(x+9,y+1,3,12,C.greenY);
+}
+
+function drawLamp(x,y){
+  // Pole
+  R(x+5,y-8,3,30,C.woodDk);
+  // Base
+  R(x+2,y+20,9,3,C.woodDk);
+  // Shade
+  R(x+2,y-12,9,7,C.gold);
+  R(x+3,y-10,7,3,'#F4E8C8');
+}
+
+function drawSideChair(x,y){
+  // Simple wooden chair
+  R(x,y-8,12,2,C.woodLt);       // seat
+  R(x,y-16,2,10,C.wood);        // back left
+  R(x+10,y-16,2,10,C.wood);     // back right
+  R(x,y+0,2,4,C.woodDk);        // left leg
+  R(x+10,y+0,2,4,C.woodDk);     // right leg
+}
+
+// ═══════════════════════════════════════════
+//  CHARACTER SPRITES (Stardew Valley style)
+//  Big head, small body, hair defines identity
+// ═══════════════════════════════════════════
+const charDefs=[
+  { // 阿哲 - navy shirt, short dark hair, standing
+    name:'阿哲', sx:'#F4C9A8', hair:'#2D1B0E', hair2:'#4A2C18',
+    top:'#264653', top2:'#1D353F', bot:'#3D3D5C',
+    x:350,y:240, pose:'stand', dir:1, topic:0,
+  },
+  { // 小棠 - red top, long brown hair, standing chatting
+    name:'小棠', sx:'#FDE0C8', hair:'#5C2E0A', hair2:'#7A3E18',
+    top:'#C84B31', top2:'#9E2B20', bot:'#4A4A6A',
+    x:480,y:240, pose:'stand', dir:-1, topic:1,
+  },
+  { // 青叶 - green shirt, dark bob cut, sitting reading
+    name:'青叶', sx:'#F5D6C0', hair:'#1A1A2E', hair2:'#2D2D4A',
+    top:'#2D6A4F', top2:'#1B4332', bot:'#5A5A6A',
+    x:200,y:230, pose:'sit', dir:1, topic:2, chairX:180, chairY:242,
+  },
+  { // 言午 - mustard top, spiky hair, walking
+    name:'言午', sx:'#F0C8A8', hair:'#4A3520', hair2:'#6B4E30',
+    top:'#D4A843', top2:'#B8922E', bot:'#3D3A4A',
+    x:560,y:240, pose:'walk', dir:1, topic:3, walkX:520, wRange:[490,590],
+  },
+  { // 蓝山 - blue top, messy hair, sitting
+    name:'蓝山', sx:'#F8D8C0', hair:'#2C1810', hair2:'#5A3830',
+    top:'#457B9D', top2:'#1D3557', bot:'#4A4A5A',
+    x:440,y:230, pose:'sit', dir:-1, topic:4, chairX:420, chairY:242,
+  },
+  { // 白露 - cream top, swept hair, leaning against wall
+    name:'白露', sx:'#FADFC8', hair:'#1C1C1C', hair2:'#3A3A3A',
+    top:'#E8E0D5', top2:'#C8C0B5', bot:'#4E4E6E',
+    x:140,y:240, pose:'lean', dir:1, topic:5,
+  },
+];
+
+/* 
+  Stardew character proportions (at sc=2):
+  Total height: ~22 units (44px)
+  Head: 10w x 9h (big, roundish)
+  Body: 9w x 8h
+  Legs: 2 per leg, 2w x 5h each
+  
+  The key is BIG HEAD, small body, distinct hair silhouette.
+*/
+function drawChar(c, hover, f){
+  const s=2.2; // pixel scale
+  const cx=c.x, cy=c.y-(c.pose==='sit'?6:0);
+  const ox=cx-5*s, oy=cy-22*s; // origin top-left
+  
+  ctx.save();
+  
+  // ── Floor shadow ──
+  ctx.fillStyle=C.shadow;
+  ctx.beginPath(); ctx.ellipse(cx,cy+3,13,3.5,0,0,Math.PI*2); ctx.fill();
+  
+  // ── LEGS (Stardew: simple 2px wide columns) ──
+  if(c.pose==='stand'||c.pose==='lean'){
+    R(ox+2*s,oy+16*s,2*s,6*s,c.bot);
+    R(ox+8*s,oy+16*s,2*s,6*s,c.bot);
+    // Shoes (1px darker)
+    R(ox+2*s,oy+21*s,2*s,1.5*s,'#2A2A3A');
+    R(ox+8*s,oy+21*s,2*s,1.5*s,'#2A2A3A');
+  } else if(c.pose==='sit'){
+    // Sitting: legs forward
+    R(ox+1*s,oy+15*s,3*s,3*s,c.bot);
+    R(ox+1*s,oy+17*s,2*s,4*s,c.bot);
+    R(ox+8*s,oy+17*s,2*s,4*s,c.bot);
+  } else if(c.pose==='walk'){
+    const legOff=Math.sin(f*0.15)*2.2;
+    R(ox+2*s,oy+16*s,2*s,6*s+legOff,c.bot);
+    R(ox+8*s,oy+16*s,2*s,6*s-legOff,c.bot);
+  }
+  
+  // ── BODY (compact, Stardew-style) ──
+  if(c.pose==='sit'){
+    R(ox+1.5*s,oy+9*s,9*s,7*s,c.top);
+    R(ox+1.5*s,oy+13*s,9*s,2.5*s,c.top2);
+  } else {
+    R(ox+1.5*s,oy+9*s,9*s,8*s,c.top);
+    R(ox+1.5*s,oy+14*s,9*s,2.5*s,c.top2);
+  }
+  
+  // ── ARMS (thin, hanging) ──
+  if(c.pose==='stand'){
+    R(ox+0.5*s,oy+9*s,2*s,6*s,c.top);
+    R(ox+9.5*s,oy+9*s,2*s,6*s,c.top);
+  } else if(c.pose==='sit'){
+    R(ox+0.5*s,oy+9*s,2*s,5*s,c.top);
+    R(ox+9.5*s,oy+10*s,2*s,4*s,c.top);
+  } else if(c.pose==='walk'){
+    const armS=Math.sin(f*0.15)*2;
+    R(ox+0.5*s,oy+9*s,2*s,6*s+armS,c.top);
+    R(ox+9.5*s,oy+9*s,2*s,6*s-armS,c.top);
+  } else if(c.pose==='lean'){
+    R(ox+0.5*s,oy+9*s,2*s,5*s,c.top);
+    R(ox+9*s,oy+7*s,2*s,5*s,c.top); // arm up
+  }
+  
+  // ── HEAD (big, round, Stardew signature) ──
+  // Hair - back/sides (defines silhouette)
+  R(ox+0.5*s,oy-1*s,11*s,5*s,c.hair);   // top
+  R(ox+0.5*s,oy+2*s,2*s,4*s,c.hair);     // left sideburn
+  R(ox+9.5*s,oy+2*s,2*s,4*s,c.hair);     // right sideburn
+  
+  // Face skin
+  R(ox+2*s,oy+1*s,8*s,5.5*s,c.sx);
+  
+  // Eyes (2px wide, Stardew simple)
+  if(c.dir>=0){
+    R(ox+5*s,oy+3*s,2*s,1.5*s,'#1A1A1A');
+    R(ox+9*s,oy+3*s,2*s,1.5*s,'#1A1A1A');
+  } else {
+    R(ox+4*s,oy+3*s,2*s,1.5*s,'#1A1A1A');
+    R(ox+8*s,oy+3*s,2*s,1.5*s,'#1A1A1A');
+  }
+  
+  // Blush (subtle)
+  R(ox+3*s,oy+4*s,1.5*s,1*s,'rgba(200,100,100,0.5)');
+  R(ox+8.5*s,oy+4*s,1.5*s,1*s,'rgba(200,100,100,0.5)');
+  
+  // Mouth
+  R(ox+6*s,oy+5.5*s,1.5*s,0.8*s,'#8B5E5E');
+  
+  // Hair top detail (bangs / style)
+  R(ox+1*s,oy,10*s,2*s,c.hair2);
+  // Individual hair wisps
+  R(ox+2*s,oy-0.5*s,2*s,1.5*s,c.hair);
+  R(ox+6*s,oy-0.5*s,3*s,1.5*s,c.hair);
+  
+  // Blink
+  if(Math.floor(f/150)%3===0&&f%150<5){
+    R(ox+3*s,oy+3.5*s,7*s,1*s,c.sx);
+  }
+  
+  // ── Hover highlight ──
+  if(hover){
+    ctx.strokeStyle='rgba(212,168,67,0.7)';
+    ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.roundRect(ox-2,oy-3,14*s,24*s,3); ctx.stroke();
+    // Click hint
+    ctx.fillStyle='#3D2B1F';
+    ctx.font='bold 7px "Noto Sans SC"';
+    ctx.textAlign='center';
+    ctx.fillText('点击加入讨论',cx,oy-5);
+    ctx.textAlign='start';
+  }
+  
+  // Nameplate below
+  ctx.fillStyle='#6B5B4A';
+  ctx.font='6px "Noto Sans SC"';
+  ctx.textAlign='center';
+  const nameY=c.pose==='sit'?cy+2:cy+6;
+  ctx.fillText(c.name,cx,nameY);
+  ctx.textAlign='start';
+  
+  ctx.restore();
+  
+  // ── Topic bubble ──
+  drawBubble(cx, oy-4, c.topic, hover?C.gold:'#2D2D2D');
+}
+
+// ═══════════════════════════════════════════
+//  SPEECH BUBBLE
+// ═══════════════════════════════════════════
+function drawBubble(cx,topY,ti,color){
+  const t=topics[ti];
+  const display=t.title.length>8?t.title.slice(0,8)+'…':t.title;
+  
+  ctx.font='7px "Noto Sans SC"';
+  const tw=ctx.measureText(display).width;
+  const bw=tw+12, bh=15;
+  const bx=cx-bw/2, by=topY-bh-3;
+  
+  // Body
+  R(bx,by,bw,bh,'#FFFFFF');
+  ctx.strokeStyle=color; ctx.lineWidth=0.8;
+  ctx.strokeRect(bx,by,bw,bh);
+  
+  // Tail
+  ctx.fillStyle='#FFFFFF';
+  ctx.beginPath(); ctx.moveTo(cx-3,topY-3); ctx.lineTo(cx,topY+1); ctx.lineTo(cx+3,topY-3); ctx.fill();
+  ctx.stroke();
+  
+  // Text
+  ctx.fillStyle=color;
+  ctx.fillText(display, bx+5, by+12);
+}
+
+// ═══════════════════════════════════════════
+//  HIT DETECTION
+// ═══════════════════════════════════════════
+function hit(cx,cy){
+  const r=cvs.getBoundingClientRect();
+  const sx=W/r.width, sy=H/r.height;
+  const mx=(cx-r.left)*sx, my=(cy-r.top)*sy;
+  for(let i=chars.length-1;i>=0;i--){
+    const c=chars[i];
+    const dx=mx-c.x, dy=my-(c.y-22);
+    if(dx*dx+dy*dy<24*24) return i;
+  }
+  return -1;
+}
+
+// ═══════════════════════════════════════════
+//  MAIN LOOP
+// ═══════════════════════════════════════════
+let chars=charDefs.map(d=>({...d}));
+let hover=-1, frame=0;
+
+cvs.addEventListener('mousemove',e=>{
+  const h=hit(e.clientX,e.clientY);
+  if(h!==hover){hover=h; cvs.style.cursor=h>=0?'pointer':'default';}
+});
+cvs.addEventListener('click',e=>{
+  const h=hit(e.clientX,e.clientY);
+  if(h>=0) window.location.href='pixel-discussion-v2.html?topic='+encodeURIComponent(topics[chars[h].topic].title);
+});
+cvs.addEventListener('mouseleave',()=>{hover=-1;});
+
+function tick(){
+  frame++;
+  
+  // Update walkers
+  chars.forEach(c=>{
+    if(c.pose==='walk'){
+      c.walkX+=c.dir*0.45;
+      if(c.walkX>c.wRange[1]){c.dir=-1; c.walkX=c.wRange[1];}
+      if(c.walkX<c.wRange[0]){c.dir=1; c.walkX=c.wRange[0];}
+      c.x=c.walkX;
+    }
+  });
+  
+  drawRoom();
+  drawBoard();
+  
+  // ═══ Furniture on floor (NOT on walls) ═══
+  drawBookshelf(574, 195);     // Bottom-right corner, on floor
+  drawTable(500, 300);         // Right side, on floor
+  drawSideChair(488, 305);     // Chair by table
+  drawLamp(62, 200);           // Left side lamp
+  drawPlant(24, 210);          // Left side plant
+  
+  // Chairs for sitting chars
+  chars.forEach(c=>{
+    if(c.pose==='sit' && c.chairX) drawSideChair(c.chairX, c.chairY-2);
+  });
+  
+  // Characters
+  chars.forEach((c,i)=>drawChar(c, i===hover, frame));
+  
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>

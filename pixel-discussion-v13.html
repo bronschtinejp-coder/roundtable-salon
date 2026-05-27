@@ -6,17 +6,17 @@
 <title>回响圆桌 · 讨论中</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#1a1220;font-family:'Microsoft YaHei','微软雅黑',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
-  #container{width:100vw;height:100vh;max-width:1280px;max-height:720px;aspect-ratio:16/9;display:flex;border:3px solid #3E2210;box-shadow:0 0 40px rgba(0,0,0,0.5)}
+  body{background:#D4D7DB;font-family:'Microsoft YaHei','微软雅黑',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  #container{width:100vw;height:100vh;max-width:1280px;max-height:720px;aspect-ratio:16/9;display:flex;border:2px solid #C1C8D3;box-shadow:0 8px 28px rgba(46,78,108,0.16);background:#F8F3E5;position:relative}
   /* Left: scene */
-  #scene{flex:0 0 30%;position:relative;background:#2A1808}
+  #scene{flex:0 0 30%;position:relative;background:#E7E8EA}
   #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
-  #back{position:absolute;top:8px;left:8px;z-index:5;background:#3E2210;border:2px solid #E8B830;color:#F5E6C8;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer;transition:all 0.15s}
+  #back{position:absolute;top:8px;left:8px;z-index:5;background:#6A4423;border:2px solid #FFD84D;color:#FFF5D8;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer;transition:all 0.15s;box-shadow:2px 2px 0 rgba(43,33,24,0.2)}
   #back:hover{background:#E8B830;color:#2A1808;border-color:#FFD84D}
   /* Character profile popup */
   #char-profile{
     display:none;position:absolute;bottom:12px;left:12px;right:12px;z-index:6;
-    background:#F5E6C8;border:2px solid #E8B830;padding:10px 12px;font-size:10px;
+    background:#FFF7E1;border:2px solid #8D6A44;padding:10px 12px;font-size:10px;
     line-height:1.6;color:#2A1808;animation:fIn .2s ease;
   }
   #char-profile.show{display:block}
@@ -27,19 +27,19 @@
   #char-profile .cp-tag{display:inline-block;background:#2B5E3A;color:#FFF;font-size:9px;padding:1px 6px;margin-right:4px;font-weight:700}
   #char-profile .cp-stat{font-size:9px;color:#8B6B4A;margin-top:4px}
   /* Right: chat panel */
-  #chat{flex:1;display:flex;flex-direction:column;background:#F5E6C8;border-left:4px solid #3E2210;font-size:13px;position:relative;overflow:hidden}
-  #chat-hdr{padding:12px 16px;font-weight:700;color:#2A1808;border-bottom:3px solid #8B6B4A;text-align:center;font-size:14px;letter-spacing:2px;flex-shrink:0;background:#E8D5B0;position:relative;z-index:2}
+  #chat{flex:1;display:flex;flex-direction:column;background:#F6F7F8;border-left:4px solid #AEB7C1;font-size:13px;position:relative;overflow:hidden}
+  #chat-hdr{padding:10px 16px;font-weight:700;color:#2F3D69;border-bottom:3px solid #BCC4D0;text-align:center;font-size:14px;letter-spacing:2px;flex-shrink:0;background:#EEF1F6;position:relative;z-index:2}
   #msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;position:relative;z-index:1}
   #msgs::-webkit-scrollbar{width:8px}
-  #msgs::-webkit-scrollbar-track{background:#E8D5B0}
-  #msgs::-webkit-scrollbar-thumb{background:#8B6B4A;border-radius:4px}
+  #msgs::-webkit-scrollbar-track{background:#E5E9F0}
+  #msgs::-webkit-scrollbar-thumb{background:#98A4B3;border-radius:4px}
   .msg{display:flex;flex-direction:column;max-width:88%;animation:fIn .3s ease}
   .msg.self{align-self:flex-end}.msg.other{align-self:flex-start}
   .msg .nm{font-size:11px;font-weight:700;margin-bottom:3px;padding:0 6px;letter-spacing:1px}
   .msg.self .nm{text-align:right;color:#8B2020}.msg.other .nm{color:#264653}
   .msg .bb{padding:9px 12px;font-size:12px;line-height:1.6;word-break:break-word;border:2px solid;position:relative}
-  .msg.self .bb{background:#3E2210;color:#F5E6C8;border-color:#6B4226;border-radius:2px 2px 0 2px}
-  .msg.other .bb{background:#FFFDF5;color:#2A1808;border-color:#C8B090;border-radius:2px 2px 2px 0;box-shadow:1px 1px 0 rgba(139,107,74,0.15)}
+  .msg.self .bb{background:#6880C7;color:#FFF;border-color:#5168A9;border-radius:2px 2px 0 2px;box-shadow:2px 2px 0 rgba(81,104,169,0.16)}
+  .msg.other .bb{background:#FFFFFF;color:#2A1808;border-color:#BFC7D2;border-radius:2px 2px 2px 0;box-shadow:2px 2px 0 rgba(160,170,182,0.16)}
   .msg .tm{font-size:9px;color:#8B6B4A;margin-top:3px;padding:0 6px}
   .msg.self .tm{text-align:right}
   .msg.other .nm::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;border:1px solid rgba(0,0,0,0.2)}
@@ -49,23 +49,29 @@
   .msg.other[data-char="\u8A00\u5348"] .nm::before{background:#E8B830}
   .msg.other[data-char="\u84DD\u5C71"] .nm::before{background:#4A7BA8}
   @keyframes fIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  #typing{padding:5px 14px 8px;font-size:11px;color:#8B6B4A;font-style:italic;min-height:22px;flex-shrink:0;position:relative;z-index:1}
-  #inp-wrap{padding:12px 14px;border-top:3px solid #8B6B4A;display:flex;gap:8px;flex-shrink:0;background:#E8D5B0;position:relative;z-index:2}
-  #inp-wrap input{flex:1;border:2px solid #8B6B4A;padding:9px 12px;font-family:'Microsoft YaHei',sans-serif;font-size:13px;background:#FFFDF5;color:#2A1808;outline:none;transition:border-color 0.2s;display:none}
+  #typing{padding:5px 14px 8px;font-size:11px;color:#788494;font-style:italic;min-height:22px;flex-shrink:0;position:relative;z-index:1}
+  #inp-wrap{padding:10px 14px;border-top:3px solid #BCC4D0;display:flex;gap:8px;flex-shrink:0;background:#EEF1F6;position:relative;z-index:2}
+  #inp-wrap input{flex:1;border:2px solid #AEB7C1;padding:9px 12px;font-family:'Microsoft YaHei',sans-serif;font-size:13px;background:#FFF;color:#2A1808;outline:none;transition:border-color 0.2s;display:none}
   #inp-wrap #mi-rich{
-    flex:1;border:2px solid #8B6B4A;padding:8px 12px;font-family:'Microsoft YaHei',sans-serif;font-size:12px;
-    background:#FFFDF5;color:#2A1808;outline:none;transition:border-color 0.2s;
+    flex:1;border:2px solid #AEB7C1;padding:8px 12px;font-family:'Microsoft YaHei',sans-serif;font-size:12px;
+    background:#FFF;color:#2A1808;outline:none;transition:border-color 0.2s;
     min-height:52px;max-height:120px;overflow-y:auto;line-height:1.6;
     white-space:pre-wrap;word-break:break-word;
   }
-  #inp-wrap #mi-rich:focus{border-color:#E8B830;box-shadow:0 0 0 1px #E8B830}
+  #inp-wrap #mi-rich:focus{border-color:#6D82C5;box-shadow:0 0 0 1px #6D82C5}
   #inp-wrap #mi-rich:empty::before{content:attr(data-placeholder);color:#B8A080;pointer-events:none}
   #inp-wrap #mi-rich .first-line{font-weight:700;font-size:13px}
-  #inp-wrap button{border:2px solid #3E2210;background:#3E2210;color:#F5E6C8;font-family:'Microsoft YaHei',sans-serif;font-size:12px;font-weight:700;padding:9px 18px;cursor:pointer;letter-spacing:2px;white-space:nowrap;transition:all 0.15s}
-  #inp-wrap button:hover{background:#E8B830;color:#2A1808;border-color:#E8B830}
+  #inp-wrap button{border:2px solid #6A78B8;background:#F9FBFE;color:#4F61A8;font-family:'Microsoft YaHei',sans-serif;font-size:12px;font-weight:700;padding:9px 18px;cursor:pointer;letter-spacing:2px;white-space:nowrap;transition:all 0.15s;box-shadow:2px 2px 0 rgba(81,104,169,0.12)}
+  #inp-wrap button:hover{background:#6A78B8;color:#FFF;border-color:#6A78B8}
   #ai-assist-btn{padding:9px 10px !important;letter-spacing:0 !important;font-size:14px !important;background:#E8D5B0 !important;border-color:#E8B830 !important;color:#B8901E !important}
   #ai-assist-btn:hover{background:#E8B830 !important;color:#2A1808 !important}
   #ai-assist-btn.active{background:#E8B830 !important;color:#2A1808 !important;box-shadow:0 0 6px rgba(232,184,48,0.4)}
+  #invite-btn{padding:9px 10px !important;letter-spacing:0 !important;font-size:13px !important;font-weight:700 !important;background:#E0F0FF !important;border-color:#4A8BC8 !important;color:#4A8BC8 !important}
+  #invite-btn:hover{background:#4A8BC8 !important;color:#FFF !important}
+  .invite-item{padding:6px 8px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:6px;border-radius:2px;margin:2px 0}
+  .invite-item:hover{background:#F0F7FF}
+  .invite-item .inv-dot{width:8px;height:8px;border-radius:50%}
+  .invite-item .inv-name{font-weight:700;color:#2D3748}
 
   /* ═══ AI Material Sidebar ═══ */
   #ai-sidebar{
@@ -228,7 +234,7 @@
 <div id="container">
 <div id="scene">
   <canvas id="c"></canvas>
-  <button id="back" onclick="history.back()">← 返回沙龙</button>
+  <button id="back" onclick="window.location.href='pixel-salon-v18.html'">← 返回沙龙</button>
   <div id="char-profile">
     <div class="cp-hdr">
       <span class="cp-name" id="cp-name"></span>
@@ -261,7 +267,16 @@
   <div id="inp-wrap">
     <div id="mi-rich" contenteditable="true" data-placeholder="第一行为观点标题（加粗），Shift+Enter换行写正文，Enter发送"></div>
     <button id="ai-assist-btn" onclick="toggleAISuggest()" title="AI 写作助手">💡</button>
+    <button id="invite-btn" onclick="toggleInvitePanel()" title="邀请同事参与">@</button>
     <button onclick="send()">发 言</button>
+  </div>
+
+  <!-- Invite Panel -->
+  <div id="invite-panel" style="display:none;position:absolute;bottom:72px;right:14px;z-index:16;background:#FFF;border:1px solid #C8D0D8;padding:0;width:200px;box-shadow:0 2px 8px rgba(0,40,80,0.1);animation:fIn .2s ease;border-radius:3px">
+    <div style="padding:8px 10px;background:#4A7BA8;color:#FFF;font-size:11px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-radius:3px 3px 0 0">
+      <span>@ 邀请同事参与</span><span style="cursor:pointer" onclick="toggleInvitePanel()">✕</span>
+    </div>
+    <div id="invite-list" style="padding:6px"></div>
   </div>
 
   <!-- Insight Card (appended at bottom of chat) -->
@@ -280,35 +295,53 @@ const W=384,H=720,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
 function sz(){const s=Math.min(scene.clientWidth/W,scene.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
 window.addEventListener('resize',sz);sz();
 function R(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(x|0,y|0,w|0,h|0)}
-const P={wall:'#5C4033',wallL:'#6B4E3D',wallD:'#4A3228',beam:'#3E2812',beamL:'#5A3E1E',trim:'#2E1A0C',wpDark:'#6B4E35',wallpaper:'#8B6B4A',wpLight:'#A07850',floor:'#8B6B4A',floorL:'#A07850',floorD:'#6B4E35',floorH:'#B8925E',wd:'#6B4226',wdL:'#8B5A36',wdD:'#3E2210',wdH:'#A0703C',stone:'#6B6B6B',stoneL:'#8A8A8A',stoneD:'#4A4A4A',fire1:'#FF6B2B',fire2:'#FFAA33',fire3:'#FFD84D',g1:'#2B5E3A',g2:'#3D8B4A',g3:'#5FB066',g4:'#8BC870',gold:'#E8B830',goldL:'#FFD84D',goldD:'#B8901E',red:'#C84040',redD:'#9B2828',blue:'#4A7BA8',rug:'#8B2020',rugG:'#CC8833',rugC:'#AA4420',rugEdge:'#4A0E0E',paper:'#F5E6C8',ink:'#2A1808',sky:'#3A5C8A',skyTop:'#1E3A5C',star:'#FFE8AA',moon:'#E8E0C0',warm:'rgba(255,200,100,',shadow:'rgba(20,10,5,'};
+const P={
+  bg:'#F0F4F8',wallTop:'#EDE0C7',wallBot:'#A97A49',baseboard:'#D0C8C0',floor:'#E5B983',floorB:'#D8AF7A',floorLine:'rgba(134,96,58,0.18)',
+  wd:'#F4F6F9',wdL:'#FFFFFF',wdD:'#B7C0C9',deskLeg:'#9098A1',
+  green:'#55AA66',greenD:'#449955',
+  blue:'#4488CC',blueD:'#336699',
+  orange:'#EE9933',orangeD:'#CC7722',
+  red:'#DD5555',purple:'#8866AA',pink:'#DD7799',
+  ink:'#334',inkL:'#556',
+  paper:'#FFFFFF',panelBorder:'#C8D0D8',
+  shadow:'rgba(0,0,0,0.06)',warm:'rgba(74,139,200,',
+  skin:'#FFD8B0',
+  gold:'#E8B830',goldL:'#FFD84D',goldD:'#B8901E',window:'#C4D7E5',windowLine:'#91A8BA',hedge:'#80B25B',hedgeD:'#6A9B47',woodWall:'#C69B67',woodLine:'#A97A49',
+  fire1:'#F0A030',fire2:'#FFBB55',fire3:'#FFD84D',
+};
 const charColors=[
-  {name:'阿哲',sx:'#F4C9A8',hr:'#2D1B0E',hr2:'#4A2C18',hrStyle:'spiky',top:'#264653',t2:'#1D353F',bot:'#3D3D5C',acc:'#4A7BA8'},
-  {name:'小棠',sx:'#FDE0C8',hr:'#5C2E0A',hr2:'#7A3E18',hrStyle:'bob',top:'#C84040',t2:'#9B2828',bot:'#4A4A6A',acc:'#FFD84D'},
-  {name:'青叶',sx:'#F5D6B8',hr:'#1A1A2E',hr2:'#2E2E4A',hrStyle:'short',top:'#2B5E3A',t2:'#1B4332',bot:'#3A3A5A',acc:'#E8B830'},
-  {name:'言午',sx:'#EEBB99',hr:'#4A3520',hr2:'#6B4E30',hrStyle:'tied',top:'#E8B830',t2:'#B8901E',bot:'#3D3A4A',acc:'#C84040'},
-  {name:'蓝山',sx:'#F8D8C0',hr:'#2C1810',hr2:'#4A3020',hrStyle:'neat',top:'#4A7BA8',t2:'#2E5C80',bot:'#3A3A5A',acc:'#E8B830'},
+  {name:'阿哲',sx:'#FFD8B0',hair:'#3A2A1A',top:'#4488CC',bot:'#446',acc:''},
+  {name:'小棠',sx:'#FFD8B0',hair:'#6B3A1A',top:'#DD5555',bot:'#446',acc:''},
+  {name:'青叶',sx:'#FFD8B0',hair:'#1A2A4E',top:'#55AA66',bot:'#446',acc:''},
+  {name:'言午',sx:'#FFD8B0',hair:'#4A3A2A',top:'#EE9933',bot:'#446',acc:''},
+  {name:'蓝山',sx:'#FFD8B0',hair:'#2A1A1A',top:'#8866AA',bot:'#446',acc:''},
 ];
 let frame=0,active=-1;
 
 function drawChar(cx,cy,ci,act,f){
-  const s=3.2,ox=cx-6*s,oy=cy-24*s;
+  const s=1.24;
+  const dy=act?-Math.abs(Math.sin(f*0.12))*2:0;
   ctx.save();
-  ctx.fillStyle=P.shadow+'0.1)';ctx.beginPath();ctx.ellipse(cx,cy+3,12,3.5,0,0,Math.PI*2);ctx.fill();
-  R(ox+3*s,oy+18*s,3*s,7*s,ci.bot);R(ox+8*s,oy+18*s,3*s,7*s,ci.bot);R(ox+2.5*s,oy+24.5*s,4*s,2*s,'#2A1A0E');R(ox+7.5*s,oy+24.5*s,4*s,2*s,'#2A1A0E');
-  R(ox+2*s,oy+10*s,10*s,9*s,ci.top);R(ox+2*s,oy+16*s,10*s,2*s,ci.t2);R(ox+5*s,oy+10*s,4*s,2*s,ci.sx);R(ox+2.5*s,oy+17.5*s,9*s,1.5*s,ci.acc);
-  if(act){R(ox+0.5*s,oy+9*s,2.5*s,8*s,ci.top);R(ox+11*s,oy+8*s,2.5*s,8*s,ci.top);R(ox+0.5*s,oy+16.5*s,2.5*s,2*s,ci.sx);R(ox+11*s,oy+15.5*s,2.5*s,2*s,ci.sx)}
-  else{R(ox+0.5*s,oy+10*s,2.5*s,7*s,ci.top);R(ox+11*s,oy+10*s,2.5*s,7*s,ci.top);R(ox+0.5*s,oy+16.5*s,2.5*s,2*s,ci.sx);R(ox+11*s,oy+16.5*s,2.5*s,2*s,ci.sx)}
-  R(ox+1*s,oy,12*s,6*s,ci.hr);R(ox+2.5*s,oy+2*s,9*s,7*s,ci.sx);
-  if(ci.hrStyle==='spiky'){R(ox+1*s,oy-2*s,12*s,4*s,ci.hr2);R(ox+3*s,oy-3*s,3*s,3*s,ci.hr);R(ox+7*s,oy-3.5*s,3*s,3*s,ci.hr);R(ox+10*s,oy-2*s,2*s,2*s,ci.hr)}
-  else if(ci.hrStyle==='bob'){R(ox+0.5*s,oy-1*s,13*s,5*s,ci.hr2);R(ox+0.5*s,oy+3*s,3*s,5*s,ci.hr);R(ox+10.5*s,oy+3*s,3*s,5*s,ci.hr);R(ox+4*s,oy-1*s,6*s,2*s,ci.hr2)}
-  else if(ci.hrStyle==='short'){R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);R(ox+1*s,oy+2*s,2*s,3*s,ci.hr)}
-  else if(ci.hrStyle==='tied'){R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);R(ox+11*s,oy+2*s,3*s,8*s,ci.hr);R(ox+12*s,oy+4*s,2*s,2*s,ci.acc)}
-  else if(ci.hrStyle==='neat'){R(ox+1*s,oy-1*s,12*s,4*s,ci.hr2);R(ox+2*s,oy+1*s,2*s,2*s,ci.hr);R(ox+10*s,oy+1*s,2*s,2*s,ci.hr)}
-  R(ox+4*s,oy+4*s,2.5*s,2.5*s,'#FFF');R(ox+8*s,oy+4*s,2.5*s,2.5*s,'#FFF');R(ox+4.5*s,oy+4.5*s,1.5*s,1.5*s,'#1A1A2E');R(ox+8.5*s,oy+4.5*s,1.5*s,1.5*s,'#1A1A2E');R(ox+5*s,oy+4*s,1*s,1*s,'#FFF');R(ox+9*s,oy+4*s,1*s,1*s,'#FFF');
-  R(ox+3*s,oy+6*s,2*s,1*s,'rgba(220,120,120,0.3)');R(ox+9*s,oy+6*s,2*s,1*s,'rgba(220,120,120,0.3)');R(ox+6*s,oy+7*s,2*s,1*s,'#8B5555');
-  if(Math.floor(f/160)%4===0&&f%160<4){R(ox+4*s,oy+4.5*s,2.5*s,1.5*s,ci.sx);R(ox+8*s,oy+4.5*s,2.5*s,1.5*s,ci.sx);R(ox+4*s,oy+5.5*s,2.5*s,1*s,'#2A1A0E');R(ox+8*s,oy+5.5*s,2.5*s,1*s,'#2A1A0E')}
-  if(act){ctx.strokeStyle=P.gold;ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(ox-3,oy-5,15*s,28*s,3);ctx.stroke();ctx.fillStyle=P.warm+'0.04)';ctx.beginPath();ctx.roundRect(ox-3,oy-5,15*s,28*s,3);ctx.fill();const bx2=cx-4,by2=oy-12;R(bx2-2,by2,12,8,P.paper);ctx.fillStyle=P.ink;ctx.font='6px "Microsoft YaHei"';ctx.fillText('...',bx2,by2+6)}
-  ctx.fillStyle=P.paper;ctx.font='bold 8px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(ci.name,cx,cy+8);ctx.textAlign='start';
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.06)';ctx.beginPath();ctx.ellipse(cx,cy+10*s,8*s,3*s,0,0,Math.PI*2);ctx.fill();
+  const step=Math.sin(f*0.12);
+  R(cx-4*s,cy+4*s+dy,3*s,7*s+step*s*0.6,ci.bot);R(cx+1*s,cy+4*s+dy,3*s,7*s-step*s*0.6,ci.bot);
+  R(cx-5*s,cy-4*s+dy,10*s,10*s,ci.top);R(cx-5*s,cy-4*s+dy,10*s,2*s,'rgba(255,255,255,0.16)');
+  R(cx-6*s,cy-3*s+dy,2*s,7*s,ci.top);R(cx+4*s,cy-3*s+dy,2*s,7*s,ci.top);
+  R(cx-7*s,cy-18*s+dy,14*s,13*s,ci.sx);
+  R(cx-7*s,cy-21*s+dy,14*s,5*s,ci.hair);R(cx-7*s,cy-16*s+dy,3*s,5*s,ci.hair);R(cx+4*s,cy-16*s+dy,3*s,4*s,ci.hair);R(cx-2*s,cy-18*s+dy,5*s,4*s,ci.hair);
+  R(cx-4*s,cy-11*s+dy,2*s,2*s,'#222');R(cx+1*s,cy-11*s+dy,2*s,2*s,'#222');
+  R(cx-1*s,cy-7*s+dy,2*s,1*s,'#CC8888');
+  if(Math.floor(f/180)%5===0&&f%180<3){R(cx-4*s,cy-11*s+dy,2*s,2*s,ci.sx);R(cx+1*s,cy-11*s+dy,2*s,2*s,ci.sx)}
+  // Active glow
+  if(act){
+    const ga=0.4+Math.sin(f*0.08)*0.2;
+    ctx.strokeStyle=`rgba(74,136,204,${ga})`;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(cx-9*s,cy-20*s+dy,18*s,32*s,2);ctx.stroke();
+  }
+  ctx.strokeStyle='#2B2118';ctx.lineWidth=1;ctx.strokeRect(cx-7*s,cy-18*s+dy,14*s,13*s);ctx.strokeRect(cx-5*s,cy-4*s+dy,10*s,10*s);
+  // Name
+  ctx.fillStyle=P.ink;ctx.font='bold 8px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(ci.name,cx,cy+14*s);ctx.textAlign='start';
   ctx.restore();
 }
 
@@ -343,8 +376,8 @@ function drawBulbIndicator(f){
     if(bulbTimer>=BULB_FADEOUT){bulbState='idle';return}
   }
   
-  const pos=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
-  const bx=pos[bulbCharIdx].x,by=pos[bulbCharIdx].y-92;
+  const pos=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
+  const bx=pos[bulbCharIdx].x,by=pos[bulbCharIdx].y-30;
   
   ctx.save();
   ctx.globalAlpha=alpha;
@@ -384,59 +417,111 @@ function drawBulbIndicator(f){
   ctx.restore();
 }
 
+function drawDesk(x,y){
+  R(x,y,72,30,'#B9C2CB');R(x+2,y+2,68,26,'#F7F8FA');R(x+2,y+2,68,4,'#FFFFFF');
+  R(x+6,y+30,5,12,'#8D959D');R(x+61,y+30,5,12,'#8D959D');
+  R(x+24,y-16,22,16,'#DCE1E8');R(x+26,y-14,18,12,'#C6ECFF');R(x+31,y,8,3,'#7F8892');
+  R(x+12,y+8,16,5,'#D6DCE3');R(x+48,y+10,6,4,'#C7CFD7');
+}
+
+function drawChair(x,y,col){
+  R(x,y,18,16,'#59636E');R(x+2,y+2,14,8,'#8D97A0');R(x+6,y+16,4,8,'#6D757E');
+}
+
+function drawPlant(x,y,s){
+  const k=s||1;R(x,y+14*k,14*k,12*k,'#CC7744');R(x+1*k,y+12*k,12*k,4*k,'#AA5533');
+  R(x+2*k,y-6*k,4*k,18*k,'#338844');R(x+6*k,y-10*k,5*k,22*k,'#44AA55');R(x+10*k,y-2*k,4*k,14*k,'#338844');
+  R(x+1*k,y-8*k,6*k,6*k,'#44AA55');R(x+8*k,y-12*k,6*k,6*k,'#66CC77');R(x+4*k,y-14*k,5*k,5*k,'#44AA55');
+}
+
+function drawShelf(x,y,h){
+  R(x,y,40,h,'#C8B090');R(x+2,y+2,36,h-4,'#D8C8A8');
+  for(let sy=y+8;sy<y+h-8;sy+=20){
+    R(x+2,sy,36,3,'#C8B090');
+    const cols=[P.red,P.blue,P.green,P.orange,P.purple,P.pink];
+    let bx=x+5;while(bx<x+36){const bw=4+((bx+sy)%3),bh=7+((bx*3+sy)%8);R(bx,sy+20-bh,bw,bh,cols[(bx+sy)%6]);bx+=bw+1}
+  }
+}
+
+function drawPoster(x,y,w,h,col,title,sub){
+  R(x+2,y+2,w,h,'rgba(0,0,0,0.08)');R(x,y,w,h,'#FFF7E9');ctx.strokeStyle='#8D6A44';ctx.lineWidth=1;ctx.strokeRect(x,y,w,h);
+  R(x+4,y+4,w-8,h-8,col);R(x+8,y+10,w-16,18,'rgba(255,255,255,0.22)');
+  ctx.fillStyle='#FFFDF8';ctx.font='bold 8px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(title,x+w/2,y+18);ctx.fillStyle='#F8F0CC';ctx.font='7px "Microsoft YaHei"';ctx.fillText(sub,x+w/2,y+h-9);ctx.textAlign='start';
+}
+
+function drawCabinet(x,y,w,h){
+  R(x,y,w,h,'#D7C39A');R(x+2,y+2,w-4,h-4,'#E8D8B4');for(let i=1;i<3;i++)R(x+4,y+i*(h/3),w-8,2,'#C2AF88');for(let i=0;i<3;i++)R(x+w-11,y+8+i*(h/3),4,4,'#9A7B4E');
+}
+
+function drawWaterCooler(x,y){
+  R(x+4,y,12,8,'#88CCEE');R(x+2,y+8,16,20,'#EEE');R(x+4,y+10,12,16,'#DDD');R(x+6,y+28,8,4,'#BBB');
+}
+
+function drawCoffeeMachine(x,y){
+  R(x,y,16,24,'#BFC6CD');R(x+2,y+2,12,16,'#F7F8FA');R(x+4,y+6,8,6,'#6B3300');R(x+4,y+20,8,4,'#FFF');R(x+2,y+18,12,2,'#8D959D');
+}
+
+function drawTrashBin(x,y){R(x,y,10,12,'#8D959D');R(x+1,y+2,8,8,'#B4BDC6');R(x-1,y,12,2,'#707982')}
+
+function drawPoster(x,y,w,h,col,title,sub){
+  R(x+2,y+2,w,h,'rgba(0,0,0,0.08)');R(x,y,w,h,'#FFF7E9');ctx.strokeStyle='#8D6A44';ctx.lineWidth=1;ctx.strokeRect(x,y,w,h);
+  R(x+4,y+4,w-8,h-8,col);R(x+8,y+10,w-16,18,'rgba(255,255,255,0.22)');
+  ctx.fillStyle='#FFFDF8';ctx.font='bold 8px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(title,x+w/2,y+18);ctx.fillStyle='#F8F0CC';ctx.font='7px "Microsoft YaHei"';ctx.fillText(sub,x+w/2,y+h-9);ctx.textAlign='start';
+}
+
+function drawBanner(x,y,w,text,col){
+  R(x,y,w,16,col);R(x+3,y+3,w-6,10,'rgba(255,255,255,0.18)');R(x-4,y+4,4,8,'#8A6A44');R(x+w,y+4,4,8,'#8A6A44');
+  ctx.fillStyle='#FFFDF8';ctx.font='bold 8px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(text,x+w/2,y+11);ctx.textAlign='start';
+}
+
+function drawDesk(x,y){R(x,y,72,30,P.wdD);R(x+2,y+2,68,26,P.wd);R(x+2,y+2,68,4,P.wdL);R(x+4,y+30,5,10,P.deskLeg);R(x+63,y+30,5,10,P.deskLeg);R(x+26,y-14,20,14,'#2A2A3A');R(x+28,y-12,16,10,'#88CCEE');R(x+32,y,8,3,'#444');R(x+12,y+6,16,5,'#DDD');R(x+50,y+8,6,4,'#DDD')}
+function drawChair(x,y,col){R(x,y,18,18,col);R(x+2,y+2,14,14,'rgba(0,0,0,0.12)');R(x+6,y+18,6,5,'#888')}
+function drawPlant(x,y,s){const k=s||1;R(x,y+14*k,14*k,12*k,'#CC7744');R(x+1*k,y+12*k,12*k,4*k,'#AA5533');R(x+2*k,y-6*k,4*k,18*k,'#338844');R(x+6*k,y-10*k,5*k,22*k,'#44AA55');R(x+10*k,y-2*k,4*k,14*k,'#338844');R(x+1*k,y-8*k,6*k,6*k,'#44AA55');R(x+8*k,y-12*k,6*k,6*k,'#66CC77');R(x+4*k,y-14*k,5*k,5*k,'#44AA55')}
+function drawShelf(x,y,h){R(x,y,40,h,'#C8B090');R(x+2,y+2,36,h-4,'#D8C8A8');for(let sy=y+8;sy<y+h-8;sy+=20){R(x+2,sy,36,3,'#C8B090');const cols=[P.red,P.blue,P.green,P.orange,P.purple,P.pink];let bx=x+5;while(bx<x+36){const bw=4+((bx+sy)%3),bh=7+((bx*3+sy)%8);R(bx,sy+20-bh,bw,bh,cols[(bx+sy)%6]);bx+=bw+1}}}
+function drawCabinet(x,y,w,h){R(x,y,w,h,'#D7C39A');R(x+2,y+2,w-4,h-4,'#E8D8B4');for(let i=1;i<3;i++)R(x+4,y+i*(h/3),w-8,2,'#C2AF88');for(let i=0;i<3;i++)R(x+w-11,y+8+i*(h/3),4,4,'#9A7B4E')}
+function drawWaterCooler(x,y){R(x+4,y,12,8,'#88CCEE');R(x+2,y+8,16,20,'#EEE');R(x+4,y+10,12,16,'#DDD');R(x+6,y+28,8,4,'#BBB')}
+function drawCoffeeMachine(x,y){R(x,y,18,28,'#555');R(x+2,y+2,14,18,'#333');R(x+4,y+6,10,8,'#6B3300');R(x+5,y+24,8,6,'#FFF');R(x+2,y+20,14,3,'#444')}
+function drawConsoleStack(x,y){R(x,y,18,8,'#6A79AF');R(x+2,y+2,14,4,'#93A5D8');R(x+4,y+3,3,2,'#FFF');R(x+3,y-6,12,6,'#D85949');R(x+5,y-4,8,3,'#F09A7E')}
+function drawCarpet(){R(82,296,220,170,'#C95B47');R(88,302,208,158,'#E48A62');for(let y=312;y<448;y+=24){for(let x=98;x<286;x+=30){R(x,y,14,8,((x+y)/16)%2?'#C95B47':'#D66D53')}}}
+
 function drawScene(f){
-  // Room (384px wide)
-  R(0,0,W,280,P.wall);for(let y=20;y<280;y+=36){R(0,y,W,2,P.wallD);R(0,y+18,W,1,P.wallL+'44')}for(let x=0;x<W;x+=96)R(x,0,2,280,P.wallD);
-  R(0,268,W,14,P.beam);R(0,268,W,3,P.beamL);R(0,280,W,4,P.trim);
-  R(0,284,W,36,P.wpDark);for(let x=0;x<W;x+=64){R(x+3,288,58,28,P.wallpaper);R(x+6,292,52,20,P.wpLight)}R(0,318,W,4,P.trim);
-  R(0,322,W,H-322,P.floor);for(let y=322;y<H;y+=20){const off=(Math.floor((y-322)/20)%2)*40;for(let x=off;x<W;x+=80){R(x,y,80,20,((x+y)%160<80)?P.floorL:P.floor);R(x,y,80,2,P.floorH+'44');R(x,y+18,80,2,P.floorD);R(x,y,2,20,P.floorD+'88')}}
-  // Rug
-  const rx=40,ry=480,rw=304,rh=100;R(rx,ry,rw,rh,P.rugEdge);R(rx+4,ry+4,rw-8,rh-8,P.rug);R(rx+10,ry+10,rw-20,rh-20,P.rugC);R(rx+16,ry+16,rw-32,rh-32,P.rugG);R(rx+22,ry+22,rw-44,rh-44,P.rug);
-  for(let fx=rx+8;fx<rx+rw-8;fx+=10){R(fx,ry-3,3,4,P.rugG);R(fx,ry+rh-1,3,4,P.rugG)}
-  // Window (smaller, centered)
-  const wx=120,wy=40,ww=140,wh=160;R(wx-5,wy-5,ww+10,wh+10,P.wdD);R(wx-2,wy-2,ww+4,wh+4,P.wd);R(wx,wy,ww,wh,P.skyTop);R(wx,wy+wh/3,ww,wh/3,P.sky);R(wx,wy+2*wh/3,ww,wh/3,'#2A4A6A');
-  for(let i=0;i<8;i++){const sx2=wx+8+((i*43)%124),sy2=wy+6+((i*67)%70);const tw2=Math.sin(f*0.04+i*1.5)>0.2?2:1;R(sx2,sy2,tw2,tw2,P.star)}
-  ctx.fillStyle=P.moon;ctx.beginPath();ctx.arc(wx+ww-24,wy+24,10,0,Math.PI*2);ctx.fill();ctx.fillStyle=P.skyTop;ctx.beginPath();ctx.arc(wx+ww-19,wy+21,8,0,Math.PI*2);ctx.fill();
-  R(wx,wy+wh-24,ww,24,'#1A3328');R(wx+20,wy+wh-34,8,14,'#0D2218');R(wx+16,wy+wh-38,16,8,'#0D2218');R(wx+80,wy+wh-36,10,16,'#0D2218');R(wx+76,wy+wh-40,18,8,'#0D2218');
-  R(wx+ww/2-2,wy,3,wh,P.wdL);R(wx,wy+wh/2-2,ww,3,P.wdL);
-  R(wx-2,wy-2,12,wh+4,'#8B3030');R(wx+ww-10,wy-2,12,wh+4,'#8B3030');
-  // Candles
-  [30,350].forEach(cx2=>{R(cx2,180,8,6,P.goldD);R(cx2+2,178,4,3,P.gold);R(cx2+2,168,4,12,P.paper);const cfh=3+Math.sin(f*0.09+cx2)*1.2;ctx.fillStyle=P.fire2;ctx.beginPath();ctx.moveTo(cx2+2,168);ctx.quadraticCurveTo(cx2+4,168-cfh,cx2+6,168);ctx.fill();ctx.fillStyle=P.warm+'0.04)';ctx.beginPath();ctx.arc(cx2+4,174,14,0,Math.PI*2);ctx.fill()});
-  // Small bookshelf (right side)
-  R(340,320,36,130,P.wdD);R(343,323,30,124,P.wd);
-  for(let sy2=332;sy2<440;sy2+=30){R(343,sy2,30,3,P.wdD);const bkCols=['#C84040','#264653','#2B5E3A','#E8B830','#4A7BA8'];let bx2=346;while(bx2<368){const bw2=3+((bx2+sy2)%3),bh2=8+((bx2*7+sy2)%8);R(bx2,sy2+30-bh2,bw2,bh2,bkCols[(bx2+sy2)%5]);bx2+=bw2+1}}
-  // Small plant (left)
-  R(10,400,14,11,'#A05020');R(12,396,10,4,'#8B4018');R(12,384,3,14,P.g1);R(16,380,4,16,P.g2);R(20,386,3,10,P.g3);R(14,378,5,5,P.g4);
-  // Characters in arc (narrower canvas)
-  const positions=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
+  R(0,0,W,H,'#E9EAEC');
+  R(20,54,W-40,H-88,'#EFE1C8');
+  R(42,96,W-62,430,P.floor);
+  R(42,96,W-62,24,P.woodWall);R(42,120,W-62,6,P.woodLine);R(42,96,14,430,P.woodWall);R(328,96,14,430,P.woodWall);
+  for(let y=128;y<526;y+=22){R(56,y,272,16,((y/22)%2)?'#D8AF7A':'#D2A56D')}
+  for(let x=60;x<326;x+=20){R(x,128,1,398,P.floorLine)}
+  R(260,96,56,62,P.window);R(264,100,48,54,'#D9E6F0');R(282,100,2,54,P.windowLine);R(264,124,48,2,P.windowLine);
+  R(288,96,40,62,P.window);R(292,100,32,54,'#D9E6F0');
+  R(52,140,62,90,'#F6F7F8');ctx.strokeStyle='#97A0A8';ctx.lineWidth=2;ctx.strokeRect(52,140,62,90);R(56,144,54,8,'#6C87C5');R(62,166,24,5,'#7FB060');R(62,180,34,5,'#D89055');R(62,194,18,5,'#6C87C5');
+  drawPoster(130,136,46,28,'#97B46B','创意','AWD');
+  R(170,150,34,12,'#EAF2FB');ctx.strokeStyle='#8D6A44';ctx.strokeRect(170,150,34,12);ctx.fillStyle='#70512D';ctx.font='bold 6px "Microsoft YaHei"';ctx.fillText('回响工作室',174,158);
+  drawDesk(114,176);drawChair(170,210,'#58626D');
+  drawDesk(126,336);drawChair(182,370,'#58626D');
+  drawDesk(204,376);drawChair(260,410,'#58626D');
+  drawDesk(250,336);drawChair(306,370,'#58626D');
+  R(292,422,32,18,'#EFEFEF');R(296,426,24,10,'#FAFAFA');
+  R(210,430,48,24,'#EA7C55');R(214,434,40,16,'#F4A07A');
+  drawCoffeeMachine(302,444);drawTrashBin(276,424);drawPlant(34,474,1.0);drawPlant(314,470,1.0);
+  R(28,526,328,20,'#D0D0D0');for(let x=36;x<350;x+=22){R(x,530,14,10,P.hedge);R(x+2,533,10,5,P.hedgeD)}
+  // Characters
+  const positions=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
   charColors.forEach((ci,i)=>{
     const isActive=i===active;
     const actBob=isActive?Math.sin(frame*0.12)*2:0;
     drawChar(positions[i].x,positions[i].y+actBob,ci,isActive,f);
-    // Active speaker: glow outline pulse + lightbulb popup
     if(isActive){
       const cx2=positions[i].x,cy2=positions[i].y+actBob;
-      // Pulsing glow outline around character
       const glowAlpha=0.4+Math.sin(f*0.08)*0.2;
-      ctx.strokeStyle=`rgba(232,184,48,${glowAlpha})`;
-      ctx.lineWidth=2;
-      ctx.beginPath();
-      ctx.roundRect(cx2-18,cy2-78,36,80,4);
-      ctx.stroke();
-      ctx.strokeStyle=`rgba(232,184,48,${glowAlpha*0.3})`;
-      ctx.lineWidth=4;
-      ctx.beginPath();
-      ctx.roundRect(cx2-20,cy2-80,40,84,6);
-      ctx.stroke();
+      ctx.strokeStyle=`rgba(74,139,200,${glowAlpha})`;ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(cx2-16,cy2-70,32,72,3);ctx.stroke();
     }
   });
-  // Anime-style lightbulb popup (single, lifecycle-based)
   drawBulbIndicator(f);
-  // Dust & vignette
-  for(let i=0;i<5;i++){const dx2=((f*0.3+i*60)%W),dy2=280+Math.sin(f*0.01+i*2)*40+i*25,da=0.15+Math.sin(f*0.02+i)*0.1;if(dy2>280&&dy2<H-40)R(dx2,dy2,2,2,P.warm+da+')')}
-  const vg=ctx.createRadialGradient(W/2,H/2,80,W/2,H/2,300);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(10,5,2,0.3)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   // Topic bar at bottom
-  const topic=params.get('topic')||'知识讨论';R(0,H-36,W,36,'rgba(42,24,8,0.8)');ctx.fillStyle=P.gold;ctx.font='bold 11px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(topic,W/2,H-14);ctx.textAlign='start';
+  const topic=params.get('topic')||'知识讨论';
+  R(0,H-32,W,32,'rgba(255,253,245,0.94)');R(0,H-32,W,2,'#C8D0D8');
+  ctx.fillStyle=P.ink;ctx.font='bold 11px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(topic,W/2,H-12);ctx.textAlign='start';
 }
 
 // ═══════════════════════════════════════
@@ -1100,7 +1185,7 @@ const charProfiles=[
   {name:'蓝山',role:'市场策划',expertise:['行业趋势','用户研究','品类分析'],contributions:11,quote:'不同用户群体的接受度差异很大，不能一概而论。'},
 ];
 
-const charPositions=[{x:60,y:530},{x:130,y:510},{x:192,y:520},{x:254,y:510},{x:324,y:530}];
+const charPositions=[{x:60,y:470},{x:130,y:450},{x:192,y:460},{x:254,y:450},{x:324,y:470}];
 
 c.addEventListener('click',(e)=>{
   const r=c.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
@@ -1125,6 +1210,46 @@ function showProfile(idx){
 
 function closeProfile(){
   document.getElementById('char-profile').classList.remove('show');
+}
+
+// ═══ Invite Feature ═══
+const inviteCandidates=[
+  {name:'白露',role:'体验设计',color:'#DD7799'},
+  {name:'阿哲',role:'系统策划',color:'#4488CC'},
+  {name:'小棠',role:'关卡策划',color:'#DD5555'},
+  {name:'青叶',role:'体验设计',color:'#55AA66'},
+  {name:'言午',role:'技术策划',color:'#EE9933'},
+  {name:'蓝山',role:'市场策划',color:'#8866AA'},
+  {name:'老陈',role:'主程',color:'#666'},
+  {name:'木鱼',role:'美术总监',color:'#CC7744'},
+];
+let inviteOpen=false;
+
+function toggleInvitePanel(){
+  inviteOpen=!inviteOpen;
+  const panel=document.getElementById('invite-panel');
+  if(inviteOpen){
+    panel.style.display='block';
+    const list=document.getElementById('invite-list');
+    list.innerHTML='';
+    inviteCandidates.forEach(c=>{
+      const d=document.createElement('div');d.className='invite-item';
+      d.innerHTML=`<span class="inv-dot" style="background:${c.color}"></span><span class="inv-name">${c.name}</span><span style="font-size:9px;color:#888">${c.role}</span>`;
+      d.onclick=()=>sendInvite(c);
+      list.appendChild(d);
+    });
+  }else{
+    panel.style.display='none';
+  }
+}
+
+function sendInvite(person){
+  toggleInvitePanel();
+  // Add system message to chat
+  const d=document.createElement('div');
+  d.className='msg other';d.setAttribute('data-char','系统');
+  d.innerHTML=`<div class="nm" style="color:#4A8BC8">📩 邀请通知</div><div class="bb" style="background:#F0F7FF;border-color:#C8D8E8;font-size:11px">你邀请了 <strong>${person.name}</strong>（${person.role}）参与本次讨论。对方将在通知栏收到提醒。</div><div class="tm">${now()}</div>`;
+  msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
 
 // ═══ Main Loop ═══

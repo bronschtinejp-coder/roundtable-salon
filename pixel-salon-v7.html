@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 知识沙龙</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');
+  
+  :root {
+    --cream: #FBF6E8;
+    --wood: #8B6914;
+    --wood-dark: #6B4E1B;
+    --wood-light: #C4A265;
+    --green: #2D6A4F;
+    --red: #C84B31;
+    --gold: #D4A843;
+    --navy: #264653;
+    --warm-gray: #8B7D6B;
+    --parchment: #F5E6C8;
+    --dark: #2D2D2D;
+  }
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: #3D2B1F;
+    font-family: 'Noto Sans SC', sans-serif;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  
+  #container {
+    position: relative;
+    width: 100vw; height: 100vh;
+    max-width: 1280px; max-height: 720px;
+    aspect-ratio: 16/9;
+  }
+  
+  #pixel-canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    cursor: default;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="pixel-canvas"></canvas>
+</div>
+
+<script>
+const W = 640, H = 360;
+const canvas = document.getElementById('pixel-canvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+function resize() {
+  const ctr = document.getElementById('container');
+  const s = Math.min(ctr.clientWidth / W, ctr.clientHeight / H);
+  canvas.width = W; canvas.height = H;
+  canvas.style.width = (W*s) + 'px';
+  canvas.style.height = (H*s) + 'px';
+}
+window.addEventListener('resize', resize); resize();
+
+// ═══════════════ Palette — warm, Stardew-inspired ═══════════════
+const P = {
+  wall:      '#F5E6C8',
+  wallTrim:  '#D4C4A0',
+  wallTrimB: '#C4B898',
+  wallShad:  '#B8A878',
+  floor:     '#B8863C',
+  floorLine: '#A0722C',
+  floorDark: '#8B6018',
+  rug:       '#C84B31',
+  rugBorder: '#9E2B20',
+  rugAccent: '#E8A860',
+  rugGold:   '#D4A843',
+  wood:      '#6B4226',
+  woodLt:    '#8B5E3C',
+  woodDk:    '#4A2C18',
+  woodSign:  '#7A5030',
+  green:     '#2D6A4F',
+  greenLt:   '#40916C',
+  greenBr:   '#52B788',
+  greenYl:   '#95C86A',
+  plantPot:  '#BC6C25',
+  plantPotD: '#9C5A1C',
+  board:     '#9C6644',
+  boardIn:   '#EDE0C8',
+  boardPin:  '#C84B31',
+  gold:      '#D4A843',
+  brass:     '#B8962E',
+  paper:     '#FEFAE0',
+  sky:       '#87CEEB',
+  skyLt:     '#B8E4F0',
+  hill:      '#5D8A3C',
+  grass:     '#7CB342',
+  shadow:    'rgba(0,0,0,0.08)',
+  shadowD:   'rgba(0,0,0,0.12)',
+  glow:      'rgba(255,240,200,0.12)',
+  white:     '#FFFFFF',
+  ink:       '#2D2D2D',
+};
+
+// ═══════════════ Topics ═══════════════
+const topics = [
+  { title: '抽签玩法融合的成与败', tag: 'Roguelike' },
+  { title: '社交系统设计的得与失', tag: '社交' },
+  { title: 'AI重塑关卡设计', tag: 'AI+游戏' },
+  { title: '叙事与机制的边界', tag: '叙事' },
+  { title: '商业化体验平衡', tag: '商业化' },
+  { title: '开放世界内容密度', tag: '关卡' },
+];
+
+// ═══════════════ Drawing primitives ═══════════════
+function rect(x,y,w,h,c) { ctx.fillStyle=c; ctx.fillRect(x|0,y|0,w|0,h|0); }
+function line(x1,y1,x2,y2,c,lw=1) { ctx.strokeStyle=c; ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+
+// ═══════════════ ROOM ═══════════════
+function drawRoom() {
+  // Wall — cream with wainscoting
+  rect(0,0,W,120, P.wall);
+  // Wainscoting trim
+  rect(0,118,W,4, P.wallTrim);
+  rect(0,120,W,6, P.wallTrimB);
+  // Wall base shadow
+  rect(0,124,W,4, P.wallShad);
+  
+  // Floor planks — warm wood
+  rect(0,128,W,H-128, P.floor);
+  for (let y=128; y<H; y+=12) {
+    line(0,y,W,y, P.floorLine, 0.5);
+  }
+  // Vertical plank seams (offset every other row)
+  for (let row=0; row<20; row++) {
+    const y = 128 + row*12;
+    const off = (row%2) ? 0 : W/2;
+    for (let x=off; x<W; x+=100 + Math.sin(row*2.3)*20) {
+      if (x<W) line(x,y,x,y+12, P.floorDark, 0.4);
+    }
+  }
+  
+  // Subtle floor wear marks — lived-in feel
+  rect(320,260,55,8, 'rgba(168,120,48,0.2)');
+  rect(500,290,40,5, 'rgba(168,120,48,0.15)');
+  
+  // ── Persian Rug (center of room, under discussion area) ──
+  const rx=210, ry=256, rw=220, rh=64;
+  rect(rx,ry,rw,rh, P.rug);
+  rect(rx+4,ry+4,rw-8,rh-8, P.rugAccent);
+  rect(rx+8,ry+8,rw-16,rh-16, P.rug);
+  // Diamond motifs
+  ctx.fillStyle = P.rugBorder;
+  for (let i=0; i<5; i++) {
+    const dx = rx + 30 + i*42, dy = ry + rh/2;
+    rect(dx-7, dy-3, 14, 6, P.rugBorder);
+    rect(dx-5, dy-1, 10, 4, P.rugAccent);
+  }
+  // Edge diamonds
+  for (let sx=rx+16; sx<rx+rw-16; sx+=42) {
+    rect(sx-3, ry+6, 6, 5, P.rugBorder);
+    rect(sx-3, ry+rh-11, 6, 5, P.rugBorder);
+  }
+  // Tassels top & bottom
+  for (let tx=rx+6; tx<rx+rw-6; tx+=12) {
+    rect(tx, ry-4, 2, 4, P.rug);
+    rect(tx+3, ry-4, 2, 4, P.rugGold);
+    rect(tx, ry+rh, 2, 4, P.rug);
+    rect(tx+3, ry+rh, 2, 4, P.rugGold);
+  }
+}
+
+// ═══════════════ WINDOW — upper left wall ═══════════════
+function drawWindow(x, y) {
+  const w=46, h=38;
+  // Frame
+  rect(x-3,y-3,w+6,h+6, P.woodDk);
+  rect(x,y,w,h, P.wood);
+  // Glass — morning sky
+  rect(x+3,y+3,w-6,h-6, P.sky);
+  rect(x+3,y+3,w-6,10, P.skyLt);
+  // Hills
+  rect(x+3,y+h-18,w-6,6, P.hill);
+  rect(x+7,y+h-20,13,5, P.grass);
+  rect(x+27,y+h-17,17,5, P.grass);
+  // Window cross bars
+  rect(x+w/2-1,y,2,h, P.woodLt);
+  rect(x,y+h/2-1,w,2, P.woodLt);
+  // Morning light beam angling down
+  ctx.fillStyle = 'rgba(255,248,220,0.08)';
+  ctx.beginPath();
+  ctx.moveTo(x+6,y+3);
+  ctx.lineTo(x+w-6,y+3);
+  ctx.lineTo(x+w+42,y+h+52);
+  ctx.lineTo(x-42,y+h+52);
+  ctx.fill();
+}
+
+// ═══════════════ TITLE SIGN — wooden hanging sign, center top ═══════════════
+function drawTitleSign() {
+  const sx=225, sy=10, sw=190, sh=42;
+  
+  // Hanging chains / ropes from ceiling
+  line(sx+10, 0, sx+10, sy, P.woodDk, 1.5);
+  line(sx+sw-10, 0, sx+sw-10, sy, P.woodDk, 1.5);
+  rect(sx+8, 0, 4, 4, P.brass);
+  rect(sx+sw-12, 0, 4, 4, P.brass);
+  
+  // Signboard shadow
+  rect(sx+3, sy+3, sw, sh, P.woodDk);
+  
+  // Main board
+  rect(sx, sy, sw, sh, P.woodSign);
+  rect(sx+2, sy+2, sw-4, sh-4, P.woodLt);
+  // Top highlight bevel
+  rect(sx+4, sy+3, sw-8, 3, 'rgba(255,255,255,0.12)');
+  // Bottom shadow
+  rect(sx+4, sy+sh-4, sw-8, 2, 'rgba(0,0,0,0.1)');
+  
+  // Inner recessed panel
+  rect(sx+10, sy+9, sw-20, sh-18, P.woodDk);
+  
+  // Title text — carved golden lettering
+  ctx.fillStyle = '#F4E8C8';
+  ctx.font = 'bold 20px "Noto Sans SC"';
+  ctx.textAlign = 'center';
+  ctx.fillText('回 响 圆 桌', sx+sw/2, sy+34);
+  
+  // Subtitle
+  ctx.fillStyle = 'rgba(244,232,200,0.6)';
+  ctx.font = '8px "Noto Sans SC"';
+  ctx.fillText('知 识 沙 龙', sx+sw/2, sy+44);
+  ctx.textAlign = 'start';
+}
+
+// ═══════════════ HOT TOPICS BOARD — right wall, paper notes ═══════════════
+function drawHotBoard() {
+  const bx=498, by=14, bw=128, bh=104;
+  
+  // Cork board frame
+  rect(bx-3, by-3, bw+6, bh+6, P.woodDk);
+  rect(bx, by, bw, bh, P.board);
+  rect(bx+3, by+3, bw-6, bh-6, P.boardIn);
+  
+  // Header
+  ctx.fillStyle = P.woodDk;
+  ctx.font = 'bold 9px "Noto Sans SC"';
+  ctx.fillText('🔥 本周热点推荐', bx+8, by+17);
+  
+  // Divider
+  line(bx+6, by+22, bx+bw-6, by+22, P.board, 1);
+  
+  // Topic cards — small pinned paper notes
+  topics.forEach((t, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const cx = bx + 10 + col*58;
+    const cy = by + 28 + row*36;
+    const cw = 54, ch = 24;
+    
+    // Paper note
+    rect(cx, cy, cw, ch, P.paper);
+    ctx.strokeStyle = '#D4C4A0';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(cx, cy, cw, ch);
+    
+    // Pin at top center
+    rect(cx+cw/2-2, cy, 4, 3, P.boardPin);
+    
+    // Text lines
+    ctx.fillStyle = P.ink;
+    ctx.font = '6.5px "Noto Sans SC"';
+    const txt = t.title.length>8 ? t.title.slice(0,8)+'..' : t.title;
+    ctx.fillText(txt, cx+3, cy+11);
+    
+    // Tag
+    ctx.fillStyle = P.rug;  // red
+    ctx.font = '5.5px "Noto Sans SC"';
+    ctx.fillText('#'+t.tag, cx+3, cy+20);
+  });
+}
+
+// ═══════════════ FURNITURE ═══════════════
+// Organized left-to-right with clear zone logic
+
+// ── Zone 1: Entrance (x: 0-130) ──
+function drawCoatRack(x, y) {
+  // Pole
+  rect(x+4, y-8, 2, 32, P.woodDk);
+  // Base
+  rect(x+2, y+22, 6, 2, P.woodDk);
+  // Top pegs
+  rect(x+2, y-8, 8, 3, P.wood);
+  rect(x, y-10, 2, 4, P.woodDk);
+  rect(x+8, y-10, 2, 4, P.woodDk);
+  // Hanging red coat
+  rect(x+8, y-6, 4, 10, P.rug);
+  rect(x+9, y-4, 3, 6, P.rugBorder);
+}
+
+function drawLamp(x, y) {
+  // Base + pole
+  rect(x+3, y+14, 6, 2, P.woodDk);
+  rect(x+5, y-10, 2, 26, P.wood);
+  // Shade
+  rect(x, y-12, 12, 6, P.gold);
+  rect(x+1, y-11, 10, 3, '#F4E8C8');
+  // Soft glow
+  ctx.fillStyle = P.glow;
+  ctx.beginPath();
+  ctx.arc(x+6, y+2, 20, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function drawTallPlant(x, y) {
+  // Pot
+  rect(x+2, y+20, 14, 10, P.plantPot);
+  rect(x+4, y+18, 10, 3, P.plantPotD);
+  // Leaves
+  rect(x+4, y-4, 3, 20, P.green);
+  rect(x+7, y-6, 4, 22, P.greenLt);
+  rect(x+10, y-2, 3, 18, P.greenBr);
+  rect(x+12, y-1, 2, 14, P.greenYl);
+}
+
+function drawSmallPlant(x, y) {
+  rect(x, y+12, 10, 8, P.plantPot);
+  rect(x+2, y+10, 6, 3, P.plantPotD);
+  rect(x+1, y+2, 3, 9, P.green);
+  rect(x+3, y, 4, 11, P.greenLt);
+  rect(x+6, y+3, 3, 9, P.greenBr);
+}
+
+// ── Zone 2: Discussion Nook (x: 130-240) ──
+function drawRoundTable(x, y) {
+  const r = 16;
+  // Shadow
+  ctx.fillStyle = P.shadowD;
+  ctx.beginPath(); ctx.ellipse(x, y+3, r+3, 5, 0, 0, Math.PI*2); ctx.fill();
+  // Central leg
+  rect(x-2, y, 4, 12, P.woodDk);
+  rect(x-5, y+12, 10, 2, P.woodDk);
+  // Table top (ellipse for round look)
+  ctx.fillStyle = P.woodLt;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r*0.4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = P.wood;
+  ctx.beginPath(); ctx.ellipse(x, y-2, r-2, r*0.35, 0, 0, Math.PI*2); ctx.fill();
+  // Items on table
+  rect(x-5, y-5, 4, 3, P.brass);     // brass cup
+  rect(x+3, y-6, 6, 2, P.paper);     // paper
+}
+
+function drawStool(x, y) {
+  // Seat
+  rect(x-4, y-7, 8, 3, P.woodLt);
+  // Legs
+  rect(x-4, y-4, 2, 5, P.woodDk);
+  rect(x+2, y-4, 2, 5, P.woodDk);
+}
+
+function drawCushion(x, y) {
+  rect(x, y+4, 14, 3, P.rugAccent);
+  rect(x, y+2, 14, 3, P.rug);
+  rect(x+1, y+1, 12, 2, P.rugAccent);
+}
+
+// ── Zone 3: Open Center (x: 240-420) ──
+// Mostly the rug — characters gather here
+
+// ── Zone 4: Coffee & Reading (x: 420-530) ──
+function drawSideTable(x, y) {
+  // Legs
+  rect(x+2, y, 2, 13, P.woodDk);
+  rect(x+26, y, 2, 13, P.woodDk);
+  // Top
+  rect(x, y-15, 30, 16, P.wood);
+  rect(x+1, y-14, 28, 13, P.woodLt);
+  // Items
+  rect(x+4, y-18, 8, 4, P.paper);      // book
+  rect(x+15, y-17, 5, 3, P.gold);       // small cup
+}
+
+function drawSnackCart(x, y) {
+  // Cart body
+  rect(x+2, y+4, 24, 8, P.woodDk);
+  rect(x, y, 28, 5, P.wood);
+  // Wheels
+  rect(x-2, y+8, 3, 3, P.woodDk);
+  rect(x+27, y+8, 3, 3, P.woodDk);
+  rect(x+2, y+12, 3, 10, P.woodDk);
+  rect(x+23, y+12, 3, 10, P.woodDk);
+  // Items on cart
+  rect(x+4, y-5, 6, 5, P.gold);          // teapot
+  rect(x+5, y-4, 4, 3, '#F4E8C8');       // highlight
+  rect(x+13, y-4, 5, 4, P.white);        // cup
+  rect(x+20, y-5, 5, 5, '#F5E6C8');      // plate
+}
+
+// ── Zone 5: Study Corner (x: 530-640) ──
+function drawBookshelf(x, y) {
+  const w=28, h=48;
+  rect(x, y, w, h, P.woodDk);
+  rect(x+2, y+2, w-4, h-4, P.wood);
+  // Shelves + books
+  const bcolors = ['#C84B31','#264653','#2D6A4F','#D4A843','#8B5E3C','#E76F51','#457B9D'];
+  for (let sy=y+7; sy<y+h-9; sy+=14) {
+    rect(x+2, sy, w-4, 3, P.woodDk);
+    for (let bx=x+5; bx<x+w-6; bx+=4) {
+      const bh = 4+((bx*7+sy)%5);
+      rect(bx, sy+3, 2.5, bh, bcolors[(bx+sy)%bcolors.length|0]);
+    }
+  }
+}
+
+function drawGlobe(x, y) {
+  // Stand base
+  rect(x+2, y+12, 6, 2, P.woodDk);
+  rect(x+4, y-4, 2, 18, P.wood);
+  // Globe sphere
+  rect(x-1, y-6, 12, 12, '#5B8C8C');    // ocean
+  rect(x+1, y-4, 8, 8, '#7AB8B8');       // highlight
+  rect(x+4, y-2, 2, 3, '#3D6B4A');       // land
+  rect(x+8, y-3, 1, 4, '#3D6B4A');
+}
+
+function drawClock(x, y) {
+  // Grandfather clock body
+  rect(x+2, y-8, 13, 27, P.woodDk);
+  rect(x+4, y-6, 9, 25, P.wood);
+  // Clock face
+  rect(x+4, y-4, 9, 10, '#FEFAE0');
+  rect(x+5, y-3, 7, 8, P.white);
+  // Hands
+  rect(x+8, y-1, 2, 1, P.ink);
+  rect(x+8, y-3, 1, 3, P.ink);
+  // Pendulum
+  rect(x+7, y+6, 2, 10, P.brass);
+  rect(x+6, y+14, 4, 3, P.gold);
+}
+
+// ═══════════════ CHARACTERS ═══════════════
+// Each positioned with clear relationship to room objects:
+// 白露 (lean): Entrance area — leaning near coat rack, just arrived
+// 青叶 (sit):  Discussion nook — seated at round table, core discussant
+// 阿哲 (stand): Center rug — main speaker, focal point
+// 蓝山 (sit):  Coffee corner — seated at side table, contemplative reader
+// 小棠 (stand): Near snack cart — sociable, energetic
+// 言午 (walk):  Between zones — moderator, connecting people
+const charDefs = [
+  { name:'白露', skin:'#FADFC8', hair:'#1C1C1C', hair2:'#3A3A3A', shirt:'#E8E0D5', s2:'#C8C0B5', pants:'#4E4E6E',
+    x:88, y:238, pose:'lean', dir:1, topic:5 },
+  { name:'青叶', skin:'#F5D6C0', hair:'#1A1A2E', hair2:'#2D2D4A', shirt:'#2D6A4F', s2:'#1B4332', pants:'#5A5A6A',
+    x:200, y:260, pose:'sit', dir:-1, topic:2, chairX:185, chairY:274 },
+  { name:'阿哲', skin:'#F4C9A8', hair:'#2D1B0E', hair2:'#4A2C18', shirt:'#264653', s2:'#1D353F', pants:'#3D3D5C',
+    x:320, y:243, pose:'stand', dir:1, topic:0 },
+  { name:'蓝山', skin:'#F8D8C0', hair:'#2C1810', hair2:'#5A3830', shirt:'#457B9D', s2:'#1D3557', pants:'#4A4A5A',
+    x:485, y:256, pose:'sit', dir:-1, topic:4, chairX:470, chairY:270 },
+  { name:'小棠', skin:'#FDE0C8', hair:'#5C2E0A', hair2:'#7A3E18', shirt:'#C84B31', s2:'#9E2B20', pants:'#4A4A6A',
+    x:446, y:242, pose:'stand', dir:-1, topic:1 },
+  { name:'言午', skin:'#F0C8A8', hair:'#4A3520', hair2:'#6B4E30', shirt:'#D4A843', s2:'#B8922E', pants:'#3D3A4A',
+    x:560, y:242, pose:'walk', dir:1, topic:3, walkX:540, walkRange:[530,610] },
+];
+
+// ═══════════════ Character Drawing ═══════════════
+function drawChair(cx, cy) {
+  const s=2;
+  // Seat
+  rect(cx-7*s, cy, 14*s, 2*s, P.woodLt);
+  // Back rest
+  rect(cx-7*s, cy-8*s, 2*s, 10*s, P.wood);
+  // Legs
+  rect(cx-6*s, cy+2*s, 1.5*s, 4*s, P.woodDk);
+  rect(cx+4.5*s, cy+2*s, 1.5*s, 4*s, P.woodDk);
+}
+
+function drawChar(c, hover, frame) {
+  const sc = 2; // scale
+  const cx=c.x, cy=c.y - (c.pose==='sit' ? 8 : 0);
+  const oy=cy-16*sc;
+  const ox=cx-5*sc;
+  
+  ctx.save();
+  
+  // ── Shadow ──
+  ctx.fillStyle = P.shadow;
+  ctx.beginPath(); ctx.ellipse(cx, cy+4, 14, 4, 0, 0, Math.PI*2); ctx.fill();
+  
+  // ── LEGS ──
+  if (c.pose==='stand' || c.pose==='lean') {
+    rect(ox+1.5*sc, oy+12*sc, 2*sc, 5*sc, c.pants);
+    rect(ox+7*sc, oy+12*sc, 2*sc, 5*sc, c.pants);
+    // Shoes
+    rect(ox+1.5*sc, oy+17*sc, 2*sc, 1.2*sc, '#2A2A3A');
+    rect(ox+7*sc, oy+17*sc, 2*sc, 1.2*sc, '#2A2A3A');
+  } else if (c.pose==='sit') {
+    rect(ox+1*sc, oy+10*sc, 3*sc, 3*sc, c.pants);
+    rect(ox+1*sc, oy+12*sc, 2*sc, 4*sc, c.pants);
+    rect(ox+7*sc, oy+12*sc, 2*sc, 4*sc, c.pants);
+  } else if (c.pose==='walk') {
+    const l=Math.sin(frame*0.12)*2.5;
+    rect(ox+1.5*sc, oy+12*sc, 2*sc, 5*sc+l, c.pants);
+    rect(ox+7*sc, oy+12*sc, 2*sc, 5*sc-l, c.pants);
+  }
+  
+  // ── BODY ──
+  const bodyH = c.pose==='sit' ? 7*sc : 8*sc;
+  rect(ox+1*sc, oy+6*sc, 9*sc, bodyH, c.shirt);
+  rect(ox+1*sc, oy+(c.pose==='sit'?11:12)*sc, 9*sc, 2*sc, c.s2);
+  // Collar
+  rect(ox+4*sc, oy+6*sc, 3*sc, 1.5*sc, c.s2);
+  
+  // ── ARMS ──
+  if (c.pose==='stand') {
+    rect(ox, oy+6*sc, 2*sc, 5.5*sc, c.shirt);
+    rect(ox+9*sc, oy+6*sc, 2*sc, 5.5*sc, c.shirt);
+  } else if (c.pose==='sit') {
+    rect(ox, oy+6*sc, 2*sc, 4*sc, c.shirt);
+    rect(ox+9*sc, oy+7*sc, 2*sc, 3*sc, c.shirt);
+  } else if (c.pose==='walk') {
+    const a=Math.sin(frame*0.12)*2;
+    rect(ox, oy+6*sc, 2*sc, 5.5*sc+a, c.shirt);
+    rect(ox+9*sc, oy+6*sc, 2*sc, 5.5*sc-a, c.shirt);
+  } else if (c.pose==='lean') {
+    rect(ox, oy+6*sc, 2*sc, 4*sc, c.shirt);
+    rect(ox+8*sc, oy+4*sc, 2*sc, 4*sc, c.shirt);
+  }
+  
+  // ── HEAD ──
+  rect(ox+1*sc, oy-1*sc, 9*sc, 6*sc, c.hair);       // hair back
+  rect(ox+2*sc, oy, 7*sc, 5*sc, c.skin);             // face
+  rect(ox+1.5*sc, oy-1.5*sc, 8*sc, 2*sc, c.hair2);   // hair top detail
+  
+  // Eyes (directional)
+  const ey = oy+2*sc;
+  if (c.dir>=0) {
+    rect(ox+4.5*sc, ey, 1.5*sc, 1*sc, '#1A1A1A');
+    rect(ox+7*sc, ey, 1.5*sc, 1*sc, '#1A1A1A');
+  } else {
+    rect(ox+3.5*sc, ey, 1.5*sc, 1*sc, '#1A1A1A');
+    rect(ox+6*sc, ey, 1.5*sc, 1*sc, '#1A1A1A');
+  }
+  // Cheek blush
+  rect(ox+3*sc, oy+3.5*sc, 1.5*sc, 0.8*sc, 'rgba(220,130,130,0.4)');
+  rect(ox+7.5*sc, oy+3.5*sc, 1.5*sc, 0.8*sc, 'rgba(220,130,130,0.4)');
+  
+  // Blink
+  if (Math.floor(frame/150)%3===0 && frame%150<5) {
+    rect(ox+3*sc, ey+0.5*sc, 6*sc, 1*sc, c.skin);
+  }
+  
+  // Mouth
+  rect(ox+5.5*sc, oy+4*sc, 1.5*sc, 0.8*sc, '#8B5E5E');
+  
+  // Hair front (bangs)
+  rect(ox+2*sc, oy-1*sc, 7*sc, 1.5*sc, c.hair);
+  
+  // ── Hover glow + click hint ──
+  if (hover) {
+    ctx.strokeStyle = 'rgba(200,160,40,0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(ox-2, oy-5, 15*sc, 24*sc, 3); ctx.stroke();
+    ctx.fillStyle = '#3D2B1F';
+    ctx.font = 'bold 7px "Noto Sans SC"';
+    ctx.textAlign = 'center';
+    ctx.fillText('点击加入讨论', cx, oy-7);
+    ctx.textAlign = 'start';
+  }
+  
+  // ── Name label below ──
+  ctx.fillStyle = '#6B5B4A';
+  ctx.font = '6px "Noto Sans SC"';
+  ctx.textAlign = 'center';
+  ctx.fillText(c.name, cx, c.pose==='sit' ? cy+3 : cy+7);
+  ctx.textAlign = 'start';
+  
+  ctx.restore();
+  
+  // ── Speech bubble above head ──
+  drawBubble(cx, oy-6, c.topic, hover ? P.gold : P.ink);
+}
+
+// ═══════════════ Speech Bubble ═══════════════
+function drawBubble(cx, topY, topicIdx, color) {
+  if (topicIdx===undefined) return;
+  const t = topics[topicIdx];
+  const text = t.title.length>8 ? t.title.slice(0,8)+'…' : t.title;
+  
+  ctx.font = '7px "Noto Sans SC"';
+  const tw = ctx.measureText(text).width;
+  const bw = tw+12, bh = 14;
+  const bx = cx-bw/2, by = topY-bh-3;
+  
+  // Bubble background
+  rect(bx, by, bw, bh, P.white);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 0.8;
+  ctx.strokeRect(bx, by, bw, bh);
+  
+  // Tail
+  ctx.fillStyle = P.white;
+  ctx.beginPath();
+  ctx.moveTo(cx-3, topY-3);
+  ctx.lineTo(cx, topY+1);
+  ctx.lineTo(cx+3, topY-3);
+  ctx.fill();
+  ctx.stroke();
+  
+  // Text
+  ctx.fillStyle = color;
+  ctx.fillText(text, bx+4, by+12);
+}
+
+// ═══════════════ Hit Detection ═══════════════
+function hitChar(mx, my) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = W/rect.width, sy = H/rect.height;
+  const cx = (mx-rect.left)*sx, cy = (my-rect.top)*sy;
+  for (let i=chars.length-1; i>=0; i--) {
+    const c = chars[i];
+    const dx = cx-c.x, dy = cy-(c.y-22);
+    if (dx*dx+dy*dy < 26*26) return i;
+  }
+  return -1;
+}
+
+// ═══════════════ Init & Animate ═══════════════
+let chars = charDefs.map(d => ({...d}));
+let hover = -1, frame = 0;
+
+canvas.addEventListener('mousemove', e => {
+  const h = hitChar(e.clientX, e.clientY);
+  if (h !== hover) { hover = h; canvas.style.cursor = h>=0 ? 'pointer' : 'default'; }
+});
+
+canvas.addEventListener('click', e => {
+  const h = hitChar(e.clientX, e.clientY);
+  if (h >= 0) {
+    const t = topics[chars[h].topic];
+    window.location.href = 'pixel-discussion-v3.html?topic=' + encodeURIComponent(t.title);
+  }
+});
+
+canvas.addEventListener('mouseleave', () => { hover = -1; });
+
+function tick() {
+  frame++;
+  
+  // Update walkers
+  chars.forEach(c => {
+    if (c.pose==='walk') {
+      c.walkX += c.dir*0.4;
+      if (c.walkX > c.walkRange[1]) { c.dir=-1; c.walkX=c.walkRange[1]; }
+      if (c.walkX < c.walkRange[0]) { c.dir=1; c.walkX=c.walkRange[0]; }
+      c.x = c.walkX;
+    }
+  });
+  
+  // ── DRAW ORDER: back to front ──
+  drawRoom();            // wall + floor + rug
+  drawWindow(22, 18);    // left wall window
+  drawTitleSign();       // center top sign
+  drawHotBoard();        // right wall board
+  
+  // Furniture — drawn in approximate depth order (top to bottom)
+  // Zone 5 wall items (highest)
+  drawClock(612, 30);
+  // Zone 1 items
+  drawCoatRack(78, 152);
+  drawLamp(52, 192);
+  drawTallPlant(30, 168);
+  // Zone 4/5 items
+  drawSnackCart(418, 268);
+  drawSideTable(448, 288);
+  // Zone 2 items (lowest — drawn after the above)
+  drawRoundTable(170, 285);
+  drawStool(152, 278);
+  drawStool(188, 276);
+  drawCushion(154, 290);
+  drawCushion(188, 292);
+  // Zone 5 floor items
+  drawGlobe(568, 200);
+  drawBookshelf(592, 144);
+  drawSmallPlant(610, 178);
+  // Zone 4 mood
+  drawSmallPlant(415, 198);
+  
+  // Chairs for sitting characters (drawn before characters)
+  chars.forEach(c => {
+    if (c.pose==='sit' && c.chairX) drawChair(c.chairX, c.chairY);
+  });
+  
+  // Characters (topmost layer)
+  chars.forEach((c, i) => drawChar(c, i===hover, frame));
+  
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 知识沙龙</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#2A1E14;font-family:'Noto Sans SC',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  #container{position:relative;width:100vw;height:100vh;max-width:1280px;max-height:720px;aspect-ratio:16/9}
+  #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+</style>
+</head>
+<body>
+<div id="container"><canvas id="c"></canvas></div>
+
+<script>
+const W=640,H=360,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+function rz(){const ct=document.getElementById('container');const s=Math.min(ct.clientWidth/W,ct.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
+window.addEventListener('resize',rz);rz();
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x|0,y|0,w|0,h|0)}
+function L(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+
+const P={
+  wall:'#FBF2DD',wain:'#EDDFBE',wainT:'#DDD0A8',base:'#CDBD90',
+  floor:'#C09248',floorD:'#A87830',floorL:'#D0A860',
+  rug:'#B8402E',rugB:'#8C2418',rugG:'#E0A050',rugC:'#D06838',
+  wd:'#5C3A1E',wdL:'#7A5230',wdD:'#3E2410',
+  g1:'#2D6A4F',g2:'#40916C',g3:'#52B788',g4:'#74A85A',g5:'#95C86A',
+  gold:'#D4A843',brass:'#B8962E',red:'#C84B31',redD:'#A03020',
+  sky:'#87CEEB',skyL:'#B8E4F0',grass:'#7CB342',hill:'#5D8A3C',
+  cork:'#C49464',corkBg:'#EDE0C8',paper:'#FEFAE0',ink:'#2D2D2D',
+  sh:'rgba(0,0,0,0.06)',shD:'rgba(0,0,0,0.12)',
+  sign:'#8B5E3C',signL:'#A07850',signD:'#4A2C18',
+};
+
+const topics=[
+  {title:'抽签玩法融合的成与败',tag:'Roguelike'},
+  {title:'社交系统设计的得与失',tag:'社交'},
+  {title:'AI如何重塑关卡设计',tag:'AI+游戏'},
+  {title:'叙事与机制的边界',tag:'叙事'},
+  {title:'商业化体验平衡',tag:'商业化'},
+  {title:'开放世界内容密度',tag:'关卡'},
+];
+
+// ═══════════════════════════════════════
+//  ROOM — structured zones
+// ═══════════════════════════════════════
+// Zone 1 (x:0-90):   Entrance/Lighting
+// Zone 2 (x:90-210): Discussion circle
+// Zone 3 (x:210-430): Open rug center
+// Zone 4 (x:430-540): Coffee/reading
+// Zone 5 (x:540-640): Study corner
+
+function drawRoom(){
+  R(0,0,W,112,P.wall);
+  R(0,110,W,3,P.wainT);R(0,112,W,10,P.wain);R(0,120,W,4,P.base);
+  R(0,124,W,H-124,P.floor);
+  for(let y=124;y<H;y+=10)L(0,y,W,y,P.floorL,0.4);
+  for(let row=0;row<25;row++){
+    const y=124+row*10,off=(row&1)?0:W/2;
+    for(let x=off;x<W;x+=85+Math.sin(row*1.9)*20)if(x<W)L(x,y,x,y+10,P.floorD,0.3);
+  }
+  // Subtle wear
+  R(340,260,50,8,'rgba(168,120,48,0.25)');
+  R(520,280,35,6,'rgba(168,120,48,0.2)');
+  
+  // Persian rug — center of Zone 3
+  const rx=220,ry=268,rw=200,rh=56;
+  R(rx,ry,rw,rh,P.rug);R(rx+4,ry+4,rw-8,rh-8,P.rugC);R(rx+8,ry+8,rw-16,rh-16,P.rugG);
+  ctx.fillStyle=P.rugB;
+  for(let i=0;i<4;i++){const dx=rx+30+i*48,dy=ry+rh/2;R(dx-8,dy-4,16,8,'');ctx.fillStyle=P.rugB;ctx.fillRect(dx-6,dy-2,12,4)}
+  for(let sx=rx+20;sx<rx+rw-20;sx+=42){R(sx-3,ry+6,6,5,P.rugB);R(sx-3,ry+rh-11,6,5,P.rugB)}
+  for(let tx=rx+6;tx<rx+rw-6;tx+=12){R(tx,ry-4,2,4,P.rug);R(tx+3,ry-4,2,4,P.rug);R(tx,ry+rh,2,4,P.rug);R(tx+3,ry+rh,2,4,P.rug)}
+}
+
+// ═══════════════════════════════════════
+//  TITLE SIGN — large wooden hanging sign
+// ═══════════════════════════════════════
+function drawTitleSign(){
+  const sx=220, sy=14, sw=200, sh=44;
+  
+  // Chains / ropes
+  L(sx+10,0,sx+10,sy+0,P.wdD,2);L(sx+sw-10,0,sx+sw-10,sy+0,P.wdD,2);
+  R(sx-2,0,4,4,P.brass);R(sx+sw-2,0,4,4,P.brass); // hooks
+  
+  // Signboard shadow
+  R(sx+3,sy+3,sw,sh,P.wdD);
+  
+  // Main board (with slight 3D bevel)
+  R(sx,sy,sw,sh,P.sign);
+  R(sx+2,sy+2,sw-4,sh-4,P.signL);
+  // Top highlight
+  R(sx+4,sy+3,sw-8,3,'rgba(255,255,255,0.15)');
+  // Bottom shadow
+  R(sx+4,sy+sh-4,sw-8,2,'rgba(0,0,0,0.15)');
+  
+  // Inner carved area
+  R(sx+8,sy+8,sw-16,sh-16,P.signD);
+  R(sx+9,sy+9,sw-18,sh-18,P.wdD);
+  
+  // Title text — large, carved look
+  ctx.fillStyle='#F4E8C8';
+  ctx.font='bold 22px "Noto Sans SC"';
+  ctx.textAlign='center';
+  ctx.fillText('回 响 圆 桌', sx+sw/2, sy+34);
+  ctx.textAlign='start';
+  
+  // Subtitle
+  ctx.fillStyle='rgba(244,232,200,0.7)';
+  ctx.font='9px "Noto Sans SC"';
+  ctx.textAlign='center';
+  ctx.fillText('知 识 沙 龙', sx+sw/2, sy+42);
+  ctx.textAlign='start';
+}
+
+// ═══════════════════════════════════════
+//  WINDOW — Zone 1/2 boundary, upper left
+// ═══════════════════════════════════════
+function drawWindow(x,y){
+  const w=50,h=40;
+  R(x-3,y-3,w+6,h+6,P.wdD);R(x,y,w,h,P.wd);
+  R(x+3,y+3,w-6,h-6,P.sky);R(x+3,y+3,w-6,10,P.skyL);
+  R(x+3,y+h-18,w-6,6,P.hill);R(x+8,y+h-20,14,5,P.grass);R(x+28,y+h-17,18,5,P.grass);
+  R(x+w/2-1,y,2,h,P.wdL);R(x,y+h/2-1,w,2,P.wdL);
+  // Light
+  ctx.fillStyle='rgba(255,255,220,0.08)';ctx.beginPath();
+  ctx.moveTo(x+8,y+3);ctx.lineTo(x+w-8,y+3);ctx.lineTo(x+w+35,y+h+40);ctx.lineTo(x-35,y+h+40);ctx.fill();
+}
+
+// ═══════════════════════════════════════
+//  HOT TOPICS BOARD — Zone 5 wall
+// ═══════════════════════════════════════
+function drawBoard(){
+  const bx=488,by=14,bw=138,bh=98;
+  R(bx-3,by-3,bw+6,bh+6,P.wdD);R(bx,by,bw,bh,P.cork);R(bx+3,by+3,bw-6,bh-6,P.corkBg);
+  ctx.fillStyle=P.wdD;ctx.font='bold 9px "Noto Sans SC"';
+  ctx.fillText('🔥 本周热点',bx+6,by+20);
+  L(bx+4,by+24,bx+bw-4,by+24,P.cork,1);
+  
+  topics.forEach((t,i)=>{
+    const cy=bx+6,cy2=by+28+i*13;
+    // Dot
+    R(cy,cy2+3,3,3,P.red);
+    ctx.fillStyle=P.ink;ctx.font='bold 7px "Noto Sans SC"';
+    const txt=t.title.length>9?t.title.slice(0,9)+'…':t.title;
+    ctx.fillText(txt,cy+7,cy2+8);
+    ctx.fillStyle=P.red;ctx.font='5.5px "Noto Sans SC"';
+    ctx.fillText('#'+t.tag,cy+7,cy2+12);
+  });
+}
+
+// ═══════════════════════════════════════
+//  FURNITURE by zone
+// ═══════════════════════════════════════
+
+// Zone 1: Entrance (x:0-90)
+function zone1(){
+  drawTallPlant(24,175);   // tall plant
+  drawLamp(54,200);        // floor lamp
+  drawCoatRack(64,160);    // coat rack
+}
+
+// Zone 2: Discussion circle (x:90-210)
+function zone2(){
+  drawRoundTable(150,300); // round table
+  drawStool(138,296);      // stools around it
+  drawStool(165,294);
+  drawCushion(115,295);    // floor cushions
+  drawCushion(180,298);
+}
+
+// Zone 4: Coffee/reading (x:430-540)
+function zone4(){
+  drawSnackCart(440,300);  // tea cart
+  drawTable(490,293);      // side table
+  drawChair(472,298);      // chair at table
+  drawPlant(440,315);      // small plant
+}
+
+// Zone 5: Study corner (x:540-640)
+function zone5(){
+  drawBookshelf(580,140);  // bookshelf
+  drawGlobe(560,210);      // globe
+  drawClock(610,135);      // grandfather clock
+}
+
+// Furniture functions
+function drawBookshelf(x,y){
+  const w=28,h=50;
+  R(x,y,w,h,P.wdD);R(x+2,y+2,w-4,h-4,P.wd);
+  for(let sy=y+8;sy<y+h-10;sy+=14){
+    R(x+2,sy,w-4,3,P.wdD);
+    const bks=['#C84B31','#264653','#2D6A4F','#D4A843','#8B5E3C','#457B9D','#6B3A5B'];
+    for(let bx=x+5;bx<x+w-6;bx+=4)R(bx,sy+3,2.5,4+((bx*7+sy)%5),bks[(bx+sy)%bks.length|0]);
+  }
+}
+function drawTable(x,y){R(x+3,y,3,16,P.wdD);R(x+44,y,3,16,P.wdD);R(x,y-17,50,18,P.wd);R(x+2,y-15,46,14,P.wdL);R(x+6,y-20,14,4,P.paper);R(x+24,y-19,8,5,P.brass);R(x+33,y-21,10,8,'#BC6C25');R(x+35,y-19,6,5,P.g3)}
+function drawRoundTable(x,y){const r=17;ctx.fillStyle=P.shD;ctx.beginPath();ctx.ellipse(x,y+3,r+3,6,0,0,Math.PI*2);ctx.fill();R(x-2,y,4,12,P.wdD);R(x-6,y+12,12,2,P.wdD);ctx.fillStyle=P.wdL;ctx.beginPath();ctx.ellipse(x,y,r,r*0.4,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=P.wd;ctx.beginPath();ctx.ellipse(x,y-2,r-2,r*0.35,0,0,Math.PI*2);ctx.fill();R(x-8,y-5,5,4,P.brass);R(x+3,y-6,7,3,P.paper)}
+function drawStool(x,y){R(x+2,y-7,8,3,P.wdL);R(x+2,y-4,2,5,P.wdD);R(x+8,y-4,2,5,P.wdD)}
+function drawPlant(x,y,h=16){R(x,y+h-4,12,10,'#BC6C25');R(x+2,y+h-6,8,3,'#9C5A1C');R(x+1,y+1,3,10,P.g1);R(x+3,y-1,4,13,P.g2);R(x+6,y+2,3,11,P.g3);R(x+8,y+0,3,12,P.g4)}
+function drawTallPlant(x,y){R(x+2,y+22,14,10,'#BC6C25');R(x+4,y+20,10,3,'#9C5A1C');R(x+4,y-2,3,18,P.g1);R(x+7,y-4,4,20,P.g2);R(x+9,y,3,16,P.g3);R(x+12,y-1,2,14,P.g4);R(x+7,y-6,3,4,P.g5)}
+function drawLamp(x,y){R(x+3,y+10,6,2,P.wdD);R(x+5,y-10,2,22,P.wd);R(x+2,y-12,8,7,P.gold);R(x+3,y-10,6,3,'#F4E8C8');ctx.fillStyle='rgba(255,240,200,0.1)';ctx.beginPath();ctx.arc(x+6,y,22,0,Math.PI*2);ctx.fill()}
+function drawGlobe(x,y){R(x+1,y+12,8,2,P.wdD);R(x+3,y-6,5,20,P.wd);R(x-1,y-6,14,12,'#5B8C8C');R(x+1,y-4,10,8,'#7AB8B8');R(x+3,y-2,3,3,'#3D6B4A');R(x+8,y-3,2,4,'#3D6B4A')}
+function drawCushion(x,y){R(x,y+4,16,4,P.rugG);R(x,y+2,16,3,P.rug);R(x+1,y+1,14,2,P.rugG)}
+function drawCoatRack(x,y){R(x+3,y-6,2,30,P.wdD);R(x+5,y+22,5,2,P.wdD);R(x+2,y-8,8,3,P.wd);R(x+1,y-8,1,4,P.wdD);R(x+7,y-8,1,4,P.wdD);R(x+7,y-6,5,10,P.red);R(x+8,y-4,3,6,P.redD)}
+function drawClock(x,y){R(x+2,y-8,14,28,P.wdD);R(x+4,y-6,10,26,P.wd);R(x+4,y-4,10,10,'#FEFAE0');R(x+5,y-3,8,8,'#FFFFFF');R(x+9,y-1,2,1,P.ink);R(x+9,y-3,1,3,P.ink);R(x+8,y+6,2,10,P.brass);R(x+7,y+14,4,3,P.gold)}
+function drawSnackCart(x,y){R(x+2,y+4,24,8,P.wdD);R(x,y,28,5,P.wd);R(x,y-2,3,4,P.wdD);R(x+25,y-2,3,4,P.wdD);R(x+1,y+10,2,8,P.wdD);R(x+25,y+10,2,8,P.wdD);R(x+4,y-5,7,5,P.gold);R(x+5,y-4,5,3,'#F4E8C8');R(x+14,y-4,5,4,'#FFFFFF');R(x+20,y-5,6,5,'#F5E6C8')}
+
+// ═══════════════════════════════════════
+//  CHARACTERS — spread across room
+// ═══════════════════════════════════════
+// White (lean): x=105 (Zone 1/2 boundary)
+// Green (sit):  x=190 (Zone 2, by round table)
+// Navy (stand): x=310 (Zone 3 center, on rug)
+// Blue (sit):   x=395 (Zone 3 right)
+// Red (stand):  x=465 (Zone 4, near coffee)
+// Yellow (walk):x=520-590 (Zone 4→5 walking path)
+
+const charDefs=[
+  {name:'白露',sx:'#FADFC8',hr:'#1C1C1C',hr2:'#3A3A3A',top:'#E8E0D5',t2:'#C8C0B5',bot:'#4E4E6E',
+   x:108,y:242,pose:'lean',dir:1,topic:5},
+  {name:'青叶',sx:'#F5D6C0',hr:'#1A1A2E',hr2:'#2D2D4A',top:'#2D6A4F',t2:'#1B4332',bot:'#5A5A6A',
+   x:190,y:230,pose:'sit',dir:1,topic:2,chX:170,chY:244},
+  {name:'阿哲',sx:'#F4C9A8',hr:'#2D1B0E',hr2:'#4A2C18',top:'#264653',t2:'#1D353F',bot:'#3D3D5C',
+   x:310,y:242,pose:'stand',dir:1,topic:0},
+  {name:'蓝山',sx:'#F8D8C0',hr:'#2C1810',hr2:'#5A3830',top:'#457B9D',t2:'#1D3557',bot:'#4A4A5A',
+   x:395,y:230,pose:'sit',dir:-1,topic:4,chX:378,chY:244},
+  {name:'小棠',sx:'#FDE0C8',hr:'#5C2E0A',hr2:'#7A3E18',top:'#C84B31',t2:'#9E2B20',bot:'#4A4A6A',
+   x:465,y:242,pose:'stand',dir:-1,topic:1},
+  {name:'言午',sx:'#F0C8A8',hr:'#4A3520',hr2:'#6B4E30',top:'#D4A843',t2:'#B8922E',bot:'#3D3A4A',
+   x:545,y:242,pose:'walk',dir:1,topic:3,wX:520,wR:[498,590]},
+];
+
+function drawChair(cx,cy){R(cx-5,cy-7,10,3,P.wdL);R(cx-5,cy-15,2,11,P.wd);R(cx+3,cy-15,2,11,P.wd);R(cx-5,cy,2,4,P.wdD);R(cx+3,cy,2,4,P.wdD)}
+
+function drawChar(c,hv,f){
+  const s=2.2,cx=c.x,cy=c.y-(c.pose==='sit'?6:0),ox=cx-5*s,oy=cy-22*s;
+  ctx.save();
+  ctx.fillStyle=P.sh;ctx.beginPath();ctx.ellipse(cx,cy+3,13,3.5,0,0,Math.PI*2);ctx.fill();
+  // Legs
+  if(c.pose==='stand'||c.pose==='lean'){
+    R(ox+2*s,oy+16*s,2*s,7*s,c.bot);R(ox+8*s,oy+16*s,2*s,7*s,c.bot);
+    R(ox+2*s,oy+22*s,2*s,1.5*s,'#2A2A3A');R(ox+8*s,oy+22*s,2*s,1.5*s,'#2A2A3A');
+  }else if(c.pose==='sit'){
+    R(ox+1*s,oy+15*s,3*s,3*s,c.bot);R(ox+1*s,oy+17*s,2*s,4*s,c.bot);R(ox+8*s,oy+17*s,2*s,4*s,c.bot);
+  }else{
+    const l=Math.sin(f*0.15)*2.2;
+    R(ox+2*s,oy+16*s,2*s,7*s+l,c.bot);R(ox+8*s,oy+16*s,2*s,7*s-l,c.bot);
+  }
+  // Body
+  if(c.pose==='sit'){R(ox+1.5*s,oy+9*s,9*s,7*s,c.top);R(ox+1.5*s,oy+13*s,9*s,2.5*s,c.t2)}
+  else{R(ox+1.5*s,oy+9*s,9*s,8*s,c.top);R(ox+1.5*s,oy+14*s,9*s,2.5*s,c.t2)}
+  // Arms
+  if(c.pose==='stand'){R(ox+0.5*s,oy+9*s,2*s,6*s,c.top);R(ox+9.5*s,oy+9*s,2*s,6*s,c.top)}
+  else if(c.pose==='sit'){R(ox+0.5*s,oy+9*s,2*s,5*s,c.top);R(ox+9.5*s,oy+10*s,2*s,4*s,c.top)}
+  else if(c.pose==='walk'){const a=Math.sin(f*0.15)*2;R(ox+0.5*s,oy+9*s,2*s,7*s+a,c.top);R(ox+9.5*s,oy+9*s,2*s,7*s-a,c.top)}
+  else{R(ox+0.5*s,oy+9*s,2*s,5*s,c.top);R(ox+9*s,oy+7*s,2*s,5*s,c.top)}
+  // Head
+  R(ox+0.5*s,oy-2*s,11*s,5*s,c.hr);R(ox+0.5*s,oy+1*s,2*s,5*s,c.hr);R(ox+9.5*s,oy+1*s,2*s,5*s,c.hr);
+  R(ox+2*s,oy,8*s,6*s,c.sx);
+  if(c.dir>=0){R(ox+5*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A');R(ox+9*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A')}
+  else{R(ox+4*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A');R(ox+8*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A')}
+  R(ox+3*s,oy+3.5*s,1.5*s,1*s,'rgba(200,100,100,0.4)');R(ox+8.5*s,oy+3.5*s,1.5*s,1*s,'rgba(200,100,100,0.4)');
+  R(ox+6*s,oy+5*s,1.5*s,0.8*s,'#8B5E5E');
+  R(ox+1*s,oy-1*s,10*s,2*s,c.hr2);
+  if(Math.floor(f/150)%3===0&&f%150<5)R(ox+3*s,oy+3*s,7*s,1*s,c.sx);
+  if(hv){ctx.strokeStyle='rgba(212,168,67,0.7)';ctx.lineWidth=1.2;ctx.beginPath();ctx.roundRect(ox-2,oy-4,14*s,25*s,3);ctx.stroke();ctx.fillStyle='#3D2B1F';ctx.font='bold 7px "Noto Sans SC"';ctx.textAlign='center';ctx.fillText('点击加入讨论',cx,oy-7);ctx.textAlign='start'}
+  ctx.fillStyle='#6B5B4A';ctx.font='6px "Noto Sans SC"';ctx.textAlign='center';ctx.fillText(c.name,cx,c.pose==='sit'?cy+2:cy+6);ctx.textAlign='start';
+  ctx.restore();
+  drawBubble(cx,oy-5,c.topic,hv?P.gold:P.ink);
+}
+
+function drawBubble(cx,ty,ti,color){
+  const t=topics[ti],txt=t.title.length>8?t.title.slice(0,8)+'…':t.title;
+  ctx.font='bold 7px "Noto Sans SC"';const tw=ctx.measureText(txt).width,bw=tw+12,bh=15,bx=cx-bw/2,by=ty-bh-3;
+  R(bx,by,bw,bh,'#FFFFFF');ctx.strokeStyle=color;ctx.lineWidth=0.8;ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle='#FFFFFF';ctx.beginPath();ctx.moveTo(cx-3,ty-3);ctx.lineTo(cx,ty+1);ctx.lineTo(cx+3,ty-3);ctx.fill();ctx.stroke();
+  ctx.fillStyle=color;ctx.fillText(txt,bx+5,by+12);
+}
+
+// ═══ Hit ═══
+function hit(mx,my){
+  const r=c.getBoundingClientRect(),sx=W/r.width,sy=H/r.height,cx=(mx-r.left)*sx,cy=(my-r.top)*sy;
+  for(let i=chars.length-1;i>=0;i--){const c2=chars[i],dx=cx-c2.x,dy=cy-(c2.y-22);if(dx*dx+dy*dy<24*24)return i}return -1;
+}
+
+// ═══ Main ═══
+let chars=charDefs.map(d=>({...d})),hv=-1,f=0;
+c.addEventListener('mousemove',e=>{const h=hit(e.clientX,e.clientY);if(h!==hv){hv=h;c.style.cursor=h>=0?'pointer':'default'}});
+c.addEventListener('click',e=>{const h=hit(e.clientX,e.clientY);if(h>=0)window.location.href='pixel-discussion-v3.html?topic='+encodeURIComponent(topics[chars[h].topic].title)});
+c.addEventListener('mouseleave',()=>{hv=-1});
+
+function tick(){
+  f++;
+  chars.forEach(c=>{if(c.pose==='walk'){c.wX+=c.dir*0.45;if(c.wX>c.wR[1]){c.dir=-1;c.wX=c.wR[1]}if(c.wX<c.wR[0]){c.dir=1;c.wX=c.wR[0]}c.x=c.wX}});
+  
+  drawRoom();
+  drawWindow(26,22);   // Zone 1 wall
+  drawTitleSign();      // Top center
+  drawBoard();          // Zone 5 wall
+  zone1();zone2();zone4();zone5();
+  
+  chars.forEach(c=>{if(c.pose==='sit'&&c.chX)drawChair(c.chX,c.chY-2)});
+  chars.forEach((c,i)=>drawChar(c,i===hv,f));
+  requestAnimationFrame(tick);
+}tick();
+</script>
+</body>
+</html>

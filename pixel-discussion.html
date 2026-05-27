@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 讨论中</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');
+  
+  :root {
+    --bg: #FFFFFF;
+    --wall: #F8F5F0;
+    --floor: #F0EBE0;
+    --navy: #2D4A6E;
+    --rust: #C75B39;
+    --sage: #7A9A7E;
+    --mustard: #D4A84B;
+    --dusty-blue: #5B7FA5;
+    --dark: #333333;
+    --light-gray: #E8E5E0;
+  }
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: var(--bg);
+    font-family: 'Noto Sans SC', sans-serif;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  
+  #container {
+    position: relative;
+    width: 100vw; height: 100vh;
+    max-width: 1600px; max-height: 900px;
+    aspect-ratio: 16/9;
+  }
+  
+  #pixel-canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  
+  /* Topic bar */
+  #topic-bar {
+    position: absolute; top: 16px; left: 0; right: 0;
+    text-align: center; z-index: 10; pointer-events: none;
+  }
+  #topic-bar .pill {
+    display: inline-block;
+    background: var(--bg);
+    border: 2px solid var(--dark);
+    padding: 6px 20px;
+    font-size: 14px; font-weight: 700;
+    color: var(--dark); letter-spacing: 2px;
+  }
+  
+  /* Chat input overlay */
+  #chat-input-area {
+    position: absolute;
+    bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex; gap: 8px;
+    background: var(--bg);
+    border: 2px solid var(--dark);
+    padding: 6px 8px;
+    align-items: center;
+  }
+  #chat-input-area input {
+    border: none; outline: none;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 13px; padding: 6px 8px;
+    width: 300px; background: transparent;
+    color: var(--dark);
+  }
+  #chat-input-area button {
+    border: 2px solid var(--dark);
+    background: var(--dark);
+    color: #fff;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 12px; font-weight: 700;
+    padding: 6px 14px; cursor: pointer;
+    letter-spacing: 2px;
+  }
+  #chat-input-area button:hover {
+    background: var(--rust);
+    border-color: var(--rust);
+  }
+  
+  /* Back button */
+  #back-btn {
+    position: absolute;
+    top: 16px; left: 16px;
+    z-index: 10;
+    background: var(--bg);
+    border: 2px solid var(--dark);
+    color: var(--dark);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 12px; font-weight: 700;
+    padding: 6px 12px; cursor: pointer;
+    letter-spacing: 2px;
+  }
+  #back-btn:hover { color: var(--rust); border-color: var(--rust); }
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="pixel-canvas"></canvas>
+  <div id="topic-bar"><span class="pill" id="topic-title">加载中…</span></div>
+  <button id="back-btn" onclick="history.back()">← 返回沙龙</button>
+  <div id="chat-input-area">
+    <input type="text" id="msg-input" placeholder="输入你的观点…" maxlength="80" />
+    <button onclick="sendMessage()">发 言</button>
+  </div>
+</div>
+
+<script>
+const CANVAS_W = 640;
+const CANVAS_H = 360;
+
+const canvas = document.getElementById('pixel-canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const container = document.getElementById('container');
+  const cw = container.clientWidth, ch = container.clientHeight;
+  const scale = Math.min(cw / CANVAS_W, ch / CANVAS_H);
+  canvas.width = CANVAS_W; canvas.height = CANVAS_H;
+  canvas.style.width = (CANVAS_W * scale) + 'px';
+  canvas.style.height = (CANVAS_H * scale) + 'px';
+  canvas.style.left = ((cw - CANVAS_W * scale)/2) + 'px';
+  canvas.style.top = ((ch - CANVAS_H * scale)/2) + 'px';
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ─── Topic data ───
+const topicMap = {
+  'topic-001': { title: '抽签玩法融合的成与败', icon: '🎲' },
+  'topic-002': { title: '社交系统设计的得与失', icon: '💬' },
+  'topic-003': { title: 'AI 如何重塑关卡设计', icon: '🤖' },
+  'topic-004': { title: '叙事与机制的结合边界', icon: '📖' },
+  'topic-005': { title: '商业化与玩家体验平衡', icon: '⚖️' },
+  'topic-006': { title: '开放世界的内容密度', icon: '🌍' },
+};
+
+const params = new URLSearchParams(window.location.search);
+const topicId = params.get('topic') || 'topic-001';
+const topic = topicMap[topicId] || topicMap['topic-001'];
+document.getElementById('topic-title').textContent = topic.icon + ' ' + topic.title;
+
+// ─── Discussion state ───
+const chars = [
+  { name: '阿哲', color: '#2D4A6E', x: 80, y: 250 },
+  { name: '小棠', color: '#C75B39', x: 200, y: 250 },
+  { name: '青叶', color: '#7A9A7E', x: 320, y: 250 },
+  { name: '言午', color: '#D4A84B', x: 440, y: 250 },
+  { name: '蓝山', color: '#5B7FA5', x: 560, y: 250 },
+];
+
+const seedMessages = [
+  { from: '阿哲', text: '我觉得关键还是底层玩法要够好，抽签只是放大器。' },
+  { from: '小棠', text: '同意。之前我们项目踩过坑，加了一堆随机BUFF玩家完全不买账。' },
+  { from: '青叶', text: '但PVE里面可以放开手脚做，PVP就得保守一些了。' },
+  { from: '言午', text: '角色适配这块工作量真的很容易爆炸，漫威他们都踩坑了。' },
+  { from: '蓝山', text: '我们后来搞了通用流派，反而成了玩家的讨论热点，意外收获。' },
+];
+
+let messages = [...seedMessages];
+let displayMessages = [];
+let typingIndex = -1;
+let typingChar = 0;
+let typeTimer = 0;
+let newMsgQueue = [];
+let frameCount = 0;
+let bubbleAnims = [];
+
+// ─── Drawing ───
+function pxFill(x, y, w, h, c) {
+  ctx.fillStyle = c;
+  ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(w), Math.ceil(h));
+}
+function pxStroke(x, y, w, h, c, lw=1) {
+  ctx.strokeStyle = c; ctx.lineWidth = lw;
+  ctx.strokeRect(Math.floor(x), Math.floor(y), Math.ceil(w), Math.ceil(h));
+}
+
+function drawPixelChar(cx, cy, color, name, dir, frame) {
+  const sc = 2.5;
+  const ox = cx - 12, oy = cy - 35;
+  
+  // Body
+  pxFill(ox + 2*sc, oy + 5*sc, 7*sc, 5*sc, color);
+  // Legs
+  pxFill(ox + 3*sc, oy + 10*sc, 2*sc, 4*sc, '#555');
+  pxFill(ox + 6*sc, oy + 10*sc, 2*sc, 4*sc, '#555');
+  // Arms
+  pxFill(ox + 1*sc, oy + 5*sc, 2*sc, 5*sc, color);
+  pxFill(ox + 8*sc, oy + 5*sc, 2*sc, 5*sc, color);
+  // Head
+  pxFill(ox + 2*sc, oy, 7*sc, 5*sc, '#333');
+  pxFill(ox + 3*sc, oy + 1*sc, 5*sc, 4*sc, '#F4D0B5');
+  // Eyes
+  pxFill(ox + 5*sc, oy + 2.5*sc, 2*sc, 1*sc, '#333');
+  pxFill(ox + 8*sc, oy + 2.5*sc, 2*sc, 1*sc, '#333');
+  // Mouth
+  pxFill(ox + 6*sc, oy + 4*sc, 1*sc, 1*sc, '#333');
+  
+  // Name tag
+  ctx.fillStyle = '#666';
+  ctx.font = '7px "Noto Sans SC"';
+  ctx.textAlign = 'center';
+  ctx.fillText(name, cx, cy + 8);
+  ctx.textAlign = 'start';
+}
+
+function drawBubble(cx, topY, text, color, alpha) {
+  if (alpha <= 0) return;
+  
+  ctx.globalAlpha = alpha;
+  
+  const maxW = 160;
+  ctx.font = '9px "Noto Sans SC"';
+  
+  // Word wrap
+  let line = '';
+  let lines = [];
+  for (let ch of text) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxW - 16 && line.length > 0) {
+      lines.push(line);
+      line = ch;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  
+  const lineH = 12;
+  const bw = Math.min(maxW, ctx.measureText(lines[0] || text).width + 16);
+  const bh = lines.length * lineH + 12;
+  const bx = cx - bw/2;
+  const by = topY - bh - 8;
+  
+  // Bubble bg
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bw, bh);
+  
+  // Tail
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.moveTo(cx - 4, topY - 8);
+  ctx.lineTo(cx, topY);
+  ctx.lineTo(cx + 4, topY - 8);
+  ctx.fill();
+  ctx.stroke();
+  
+  // Text
+  ctx.fillStyle = '#333';
+  lines.forEach((l, i) => {
+    ctx.fillText(l, bx + 8, by + 10 + i * lineH);
+  });
+  
+  ctx.globalAlpha = 1;
+}
+
+// ─── Main draw ───
+function drawDiscussion() {
+  // Background
+  ctx.fillStyle = '#F8F5F0';
+  ctx.fillRect(0, 0, CANVAS_W, 90);
+  ctx.fillStyle = '#F0EBE0';
+  ctx.fillRect(0, 90, CANVAS_W, CANVAS_H - 90);
+  
+  // Subtle floor pattern
+  ctx.strokeStyle = '#E8E3D8';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < CANVAS_W; x += 16) {
+    ctx.beginPath(); ctx.moveTo(x, 90); ctx.lineTo(x, CANVAS_H); ctx.stroke();
+  }
+  
+  // Characters in semi-circle
+  const charY = 240;
+  chars.forEach((ch, i) => {
+    const cx = 80 + i * 120;
+    const cy = charY + Math.sin(i * 0.5) * 15;
+    ch.x = cx; ch.y = cy;
+    drawPixelChar(cx, cy, ch.color, ch.name, 1, frameCount);
+  });
+  
+  // Speech bubbles (floating above, showing most recent messages)
+  const visible = displayMessages.slice(-5);
+  visible.forEach((msg, i) => {
+    const ch = chars.find(c => c.name === msg.from);
+    if (!ch) return;
+    const cx = ch.x;
+    const topY = 200 - i * 42;
+    
+    // Find animation for this message
+    const anim = bubbleAnims.find(a => a.text === msg.text);
+    const alpha = anim ? anim.alpha : 1;
+    
+    drawBubble(cx, topY, msg.text, msg.color || ch.color, alpha);
+  });
+  
+  // "Your turn" hint if no one typing
+  if (typingIndex < 0 && newMsgQueue.length === 0) {
+    const pulse = 0.4 + 0.3 * Math.sin(frameCount * 0.05);
+    ctx.fillStyle = `rgba(199,91,57,${pulse})`;
+    ctx.font = '10px "Noto Sans SC"';
+    ctx.textAlign = 'center';
+    ctx.fillText('↓ 在下方输入你的观点，加入讨论 ↓', CANVAS_W/2, CANVAS_H - 50);
+    ctx.textAlign = 'start';
+  }
+}
+
+// ─── Typing animation ───
+function updateTyping() {
+  frameCount++;
+  
+  // Animate bubbles
+  bubbleAnims.forEach(a => {
+    a.alpha = Math.min(1, a.alpha + 0.04);
+  });
+  
+  if (newMsgQueue.length > 0 && typingIndex < 0) {
+    // Start new typing
+    const next = newMsgQueue.shift();
+    typingIndex = messages.length;
+    typingChar = 0;
+    messages.push({ from: next.from, text: '', color: next.fromColor });
+    typeTimer = 0;
+  }
+  
+  if (typingIndex >= 0) {
+    typeTimer++;
+    if (typeTimer % 3 === 0) {
+      const fullText = messages[typingIndex]._fullText || '';
+      if (typingChar < fullText.length) {
+        typingChar++;
+        messages[typingIndex].text = fullText.slice(0, typingChar);
+      } else {
+        // Done typing
+        typingIndex = -1;
+      }
+    }
+  }
+  
+  // Update display
+  displayMessages = messages.filter(m => m.text && m.text.length > 0);
+  
+  drawDiscussion();
+  requestAnimationFrame(updateTyping);
+}
+
+// ─── Send message ───
+function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  input.value = '';
+  
+  // Add user message immediately
+  const userMsg = { from: '你', text, color: '#333' };
+  messages.push(userMsg);
+  bubbleAnims.push({ text, alpha: 0 });
+  
+  // Simulate AI response after a delay
+  const responders = chars.map(c => c.name);
+  const responder = responders[Math.floor(Math.random() * responders.length)];
+  const respColor = chars.find(c => c.name === responder)?.color || '#666';
+  
+  setTimeout(() => {
+    const responses = [
+      '这个角度很有意思，展开说说？',
+      '确实，我们之前也遇到过类似的问题。',
+      '我觉得可以从另一个方向来看这个问题…',
+      '有道理！不过实操层面可能有些挑战。',
+      '同意，这跟实际项目里的经验很吻合。',
+    ];
+    const resp = responses[Math.floor(Math.random() * responses.length)];
+    newMsgQueue.push({
+      from: responder,
+      fromColor: respColor,
+      text: resp,
+    });
+  }, 1200 + Math.random() * 800);
+  
+  // Scroll-like effect: remove oldest messages if too many
+  if (messages.length > 20) {
+    messages = messages.slice(-15);
+    bubbleAnims = bubbleAnims.slice(-10);
+  }
+}
+
+// Enter key
+document.getElementById('msg-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+// Start
+updateTyping();
+</script>
+</body>
+</html>

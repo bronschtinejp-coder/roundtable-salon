@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回响圆桌 · 知识沙龙</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#1A3A1A;font-family:'Noto Sans SC',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  #container{position:relative;width:100vw;height:100vh;max-width:1280px;max-height:720px;aspect-ratio:16/9}
+  #c{position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:4px}
+</style>
+</head>
+<body><div id="container"><canvas id="c"></canvas></div>
+
+<script>
+const W=640,H=360,ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+function rz(){const ct=document.getElementById('container');const s=Math.min(ct.clientWidth/W,ct.clientHeight/H);c.width=W;c.height=H;c.style.width=(W*s)+'px';c.style.height=(H*s)+'px'}
+window.addEventListener('resize',rz);rz();
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x|0,y|0,w|0,h|0)}
+function L(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+
+const P={
+  sky:'#8EC8E8',skyL:'#A8DCF0',skyT:'#6AB8D8',
+  cloud:'#F0F4F8',cloudD:'#D8E0E8',
+  hill1:'#5D8A3C',hill2:'#4A7030',hill3:'#7CB342',
+  grass:'#6AAA3C',grassD:'#558A30',grassL:'#8ACA50',
+  dirt:'#C8A060',dirtD:'#B08848',dirtL:'#D8B878',
+  stone:'#D0C0A0',stoneD:'#B8A888',stoneL:'#E0D4B8',
+  path:'#C8B898',pathD:'#B0A080',
+  sakura:'#E8A0B8',sakuraD:'#C87090',sakuraL:'#F0D0E0',sakuraW:'#8B6B4A',
+  wood:'#5C3A1E',woodL:'#7A5230',woodD:'#3E2410',
+  roof1:'#8B5E3C',roof2:'#D4785A',roof3:'#6B8EC0',
+  fence:'#C89860',fenceD:'#A87840',
+  gold:'#D4A843',red:'#C84B31',navy:'#264653',ink:'#2D2D2D',
+  water:'#60A8D0',waterL:'#88C8F0',
+  yellow:'#E8C040',yellowD:'#C8A020',
+  sh:'rgba(0,0,0,0.06)',
+};
+
+const topics=[
+  {title:'抽签玩法融合的成与败',tag:'Roguelike'},
+  {title:'社交系统设计的得与失',tag:'社交'},
+  {title:'AI如何重塑关卡设计',tag:'AI+游戏'},
+  {title:'叙事与机制的边界',tag:'叙事'},
+  {title:'商业化体验平衡',tag:'商业化'},
+  {title:'开放世界内容密度',tag:'关卡'},
+];
+
+/* ═══════════════════════════════════════════════
+   OUTDOOR FARM PLAZA (Stardew Valley style)
+   ┌─────────────────────────────────────────────┐
+   │  ☁️        ☁️    SKY     ☁️              │
+   │        ⛰️ hills ─── ⛰️                    │
+   │  [sakura]   [TITLE ARCH]  [shop+board]    │
+   │                                            │
+   │  ╔═══════════════════════════════════╗     │
+   │  ║     STONE PLAZA (discussion)     ║     │
+   │  ║  char  char    char  char  char  ║     │
+   │  ╚═══════════════════════════════════╝     │
+   │  [chest]  [table]     [bench+flowers]     │
+   │  grass    grass    grass    grass  grass   │
+   │  ─── fence ─── path ─── fence ───         │
+   └─────────────────────────────────────────────┘
+   ═══════════════════════════════════════════════ */
+
+function drawSky(){
+  // Sky gradient
+  R(0,0,W,90,P.sky);
+  for(let y=0;y<90;y+=2)R(0,y,W,1,`rgba(142,200,232,${1-y/180})`);
+  // Top darker
+  R(0,0,W,20,P.skyT);
+  
+  // Clouds
+  function cloud(cx,cy,s=1){
+    ctx.fillStyle=P.cloud;
+    [0,8*s,16*s,24*s].forEach(ox=>{ctx.beginPath();ctx.arc(cx+ox,cy,6*s,0,Math.PI*2);ctx.fill()});
+    [4*s,12*s,20*s].forEach(ox=>{ctx.beginPath();ctx.arc(cx+ox,cy-3*s,5*s,0,Math.PI*2);ctx.fill()});
+    ctx.fillStyle=P.cloudD;
+    [8*s,16*s].forEach(ox=>{ctx.beginPath();ctx.arc(cx+ox,cy+2*s,4*s,0,Math.PI*2);ctx.fill()});
+  }
+  cloud(80,30,1.2);cloud(280,22,1.0);cloud(480,35,0.9);cloud(590,20,0.8);
+  
+  // Distant hills
+  R(0,60,W,35,P.hill1);
+  // Hill silhouettes
+  ctx.fillStyle=P.hill2;
+  ctx.beginPath();ctx.moveTo(0,70);ctx.quadraticCurveTo(60,40,120,70);
+  ctx.quadraticCurveTo(180,30,250,70);ctx.quadraticCurveTo(320,25,400,70);
+  ctx.quadraticCurveTo(480,35,560,70);ctx.quadraticCurveTo(610,28,640,70);
+  ctx.lineTo(640,95);ctx.lineTo(0,95);ctx.fill();
+  // Lighter hill layer
+  ctx.fillStyle=P.hill3;
+  ctx.beginPath();ctx.moveTo(0,75);ctx.quadraticCurveTo(80,55,160,75);
+  ctx.quadraticCurveTo(240,50,350,75);ctx.quadraticCurveTo(450,55,530,75);
+  ctx.quadraticCurveTo(590,48,640,75);ctx.lineTo(640,95);ctx.lineTo(0,95);ctx.fill();
+  
+  // Grass transition
+  R(0,88,W,12,P.grass);
+  R(0,92,W,8,P.grassD);
+}
+
+// ═══ TITLE ARCH — wooden arch over plaza ═══
+function drawTitleArch(){
+  const ax=210,ay=5;
+  // Posts
+  R(ax,ay+6,8,68,P.woodD);R(ax+2,ay+6,4,68,P.wood);
+  R(ax+182,ay+6,8,68,P.woodD);R(ax+184,ay+6,4,68,P.wood);
+  // Cross beam
+  R(ax-4,ay,208,12,P.woodD);R(ax,ay+2,200,8,P.wood);
+  // Top highlight
+  R(ax+4,ay+2,192,2,'rgba(255,255,255,0.15)');
+  
+  // Hanging sign
+  const sx=245,sw=110,sh=30;
+  L(sx+10,ay+8,sx+10,ay+16,P.woodD,1.5);L(sx+sw-10,ay+8,sx+sw-10,ay+16,P.woodD,1.5);
+  R(sx+2,ay+16,sw,sh,P.woodD);R(sx,ay+14,sw,sh,P.wood);
+  R(sx+3,ay+16,sw-6,sh-5,P.woodL);
+  ctx.fillStyle='#F4E8C8';ctx.font='bold 16px "Noto Sans SC"';ctx.textAlign='center';
+  ctx.fillText('回响圆桌',sx+sw/2,ay+37);
+  ctx.textAlign='start';
+  // Subtitle
+  ctx.fillStyle='rgba(244,232,200,0.7)';ctx.font='7px "Noto Sans SC"';ctx.textAlign='center';
+  ctx.fillText('知识沙龙',sx+sw/2,ay+44);ctx.textAlign='start';
+}
+
+// ═══ BUILDINGS (edges of plaza) ═══
+
+// Left building (green roof, like reference)
+function drawLeftBuilding(){
+  const bx=-10,by=30;
+  // Wall
+  R(bx,by+20,50,50,P.woodL);
+  R(bx+2,by+22,46,46,'#E8D8C0');
+  // Log texture
+  for(let ly=by+22;ly<by+68;ly+=6)R(bx+4,ly,42,1,'rgba(200,180,160,0.3)');
+  // Roof (green, sloped)
+  ctx.fillStyle=P.g1;ctx.beginPath();ctx.moveTo(bx-8,by+20);ctx.lineTo(bx+25,by);ctx.lineTo(bx+58,by+20);ctx.fill();
+  ctx.fillStyle=P.g2;ctx.beginPath();ctx.moveTo(bx-8,by+20);ctx.lineTo(bx+25,by+3);ctx.lineTo(bx+58,by+20);ctx.fill();
+  // Roof trim
+  R(bx-8,by+18,66,3,P.woodD);
+  // Window
+  R(bx+10,by+30,16,14,P.woodD);R(bx+12,by+32,12,10,P.sky);R(bx+17,by+32,2,10,P.wood);
+}
+
+// Right building (blue shop, like reference showing "500")
+function drawRightBuilding(){
+  const bx=540,by=28;
+  // Wall
+  R(bx,by+18,70,52,P.woodL);
+  R(bx+2,by+20,66,48,'#D8E0F0');
+  // Roof (sloped)
+  ctx.fillStyle=P.roof3;ctx.beginPath();ctx.moveTo(bx-6,by+18);ctx.lineTo(bx+35,by);ctx.lineTo(bx+76,by+18);ctx.fill();
+  ctx.fillStyle='#5078B8';ctx.beginPath();ctx.moveTo(bx-6,by+18);ctx.lineTo(bx+35,by+5);ctx.lineTo(bx+76,by+18);ctx.fill();
+  R(bx-6,by+16,82,3,P.woodD);
+  // Window
+  R(bx+10,by+26,20,16,P.woodD);R(bx+12,by+28,16,12,P.sky);
+  R(bx+19,by+28,2,12,P.wood);R(bx+12,by+33,16,2,P.wood);
+  // Shop name
+  ctx.fillStyle='#FFF';ctx.font='bold 8px "Noto Sans SC"';ctx.textAlign='center';
+  ctx.fillText('杂货铺',bx+35,by+15);ctx.textAlign='start';
+}
+
+// ═══ HOT TOPICS BOARD — wooden notice board on right ═══
+function drawBoard(){
+  const bx=498,by=90,bw=132,bh=155;
+  // Post
+  R(bx+bw/2-3,by+bh,6,20,P.woodD);R(bx+bw/2-2,by+bh,4,20,P.wood);
+  // Board frame
+  R(bx-4,by-4,bw+8,bh+8,P.woodD);
+  R(bx,by,bw,bh,P.wood);
+  R(bx+3,by+3,bw-6,bh-6,P.woodL);
+  // Header
+  ctx.fillStyle='#F4E8C8';ctx.font='bold 10px "Noto Sans SC"';ctx.textAlign='center';
+  ctx.fillText('🔥 本周热点',bx+bw/2,by+22);
+  L(bx+10,by+28,bx+bw-10,by+28,P.woodD,1);
+  // Topic list
+  topics.forEach((t,i)=>{
+    const ty=by+40+i*18;
+    // Bullet
+    R(bx+12,ty+4,4,4,P.red);
+    // Title (clipped to board width)
+    ctx.fillStyle=P.ink;ctx.font='bold 8px "Noto Sans SC"';
+    const txt=t.title.length>10?t.title.slice(0,10)+'…':t.title;
+    ctx.fillText(txt,bx+22,ty+9);
+    // Tag
+    ctx.fillStyle=P.red;ctx.font='6px "Noto Sans SC"';
+    ctx.fillText('#'+t.tag,bx+22,ty+15);
+  });
+  ctx.textAlign='start';
+}
+
+// Fence
+function drawFence(x,y,len){
+  // Posts
+  for(let px=x;px<x+len;px+=18){
+    R(px,y-8,4,10,P.fenceD);R(px+1,y-6,2,7,P.fence);
+  }
+  // Horizontal rails
+  R(x,y-6,len,2,P.fenceD);R(x,y-2,len,2,P.fenceD);
+}
+
+// ═══ STONE PLAZA (center, like reference) ═══
+function drawPlaza(){
+  const px=100,py=240,pw=440,ph=72;
+  
+  // Grass border around plaza
+  R(px-8,py-4,pw+16,ph+8,P.grassD);
+  
+  // Stone base
+  R(px,py,pw,ph,P.stone);
+  
+  // Flagstone grid
+  for(let row=0;row<Math.ceil(ph/18);row++){
+    for(let col=0;col<Math.ceil(pw/24);col++){
+      const sx=px+col*24+(row%2?12:0),sy=py+row*18;
+      if(sx<px+pw&&sy<py+ph){
+        R(sx,sy,24,18,'');
+        ctx.fillStyle=P.stone;
+        ctx.fillRect(sx,sy,24,18);
+        ctx.strokeStyle=P.stoneD;ctx.lineWidth=0.6;
+        ctx.strokeRect(sx+0.5,sy+0.5,23,17);
+      }
+    }
+  }
+  
+  // Lighter center stones
+  for(let i=0;i<6;i++){
+    const sx=px+80+i*55,sy=py+22+(i%2)*18;
+    R(sx,sy,40,14,P.stoneL);
+    ctx.strokeStyle=P.stoneD;ctx.lineWidth=0.5;ctx.strokeRect(sx,sy,40,14);
+  }
+}
+
+// ═══ SAKURA TREE (left, like reference) ═══
+function drawSakura(x,y){
+  // Shadow
+  ctx.fillStyle=P.sh;ctx.beginPath();ctx.ellipse(x+10,y+8,18,6,0,0,Math.PI*2);ctx.fill();
+  // Trunk
+  R(x+7,y-10,7,22,P.sakuraW);R(x+6,y-15,9,28,P.sakuraW);
+  R(x+8,y-20,5,35,P.woodD);
+  // Canopy
+  ctx.fillStyle='rgba(240,192,216,0.75)';
+  for(let i=0;i<10;i++){const ax=x+4+(i*3.2)%18,ay=y-20+(i*4)%16,r=8+(i%3)*3;ctx.beginPath();ctx.arc(ax,ay,r,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle='rgba(232,160,184,0.85)';
+  for(let i=0;i<7;i++){const ax=x+6+(i*4)%16,ay=y-22+(i*5)%14,r=6+(i%2)*2;ctx.beginPath();ctx.arc(ax,ay,r,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle='rgba(255,220,240,0.6)';
+  for(let i=0;i<4;i++){const ax=x+8+i*4,ay=y-25+i*2;ctx.beginPath();ctx.arc(ax,ay,4,0,Math.PI*2);ctx.fill()}
+}
+
+// ═══ FURNITURE on grass around plaza ═══
+function drawChest(x,y){
+  R(x,y,18,12,P.woodD);R(x+1,y+1,16,10,P.wood);
+  R(x+1,y+1,16,3,P.woodL);R(x+6,y+5,6,3,P.gold);
+}
+function drawRoundTable(x,y){
+  const r=16;
+  ctx.fillStyle=P.sh;ctx.beginPath();ctx.ellipse(x,y+3,r+3,5,0,0,Math.PI*2);ctx.fill();
+  R(x-2,y,4,12,P.woodD);R(x-5,y+12,10,2,P.woodD);
+  ctx.fillStyle=P.woodL;ctx.beginPath();ctx.ellipse(x,y,r-1,r*0.35,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=P.wood;ctx.beginPath();ctx.ellipse(x,y-2,r-3,r*0.3,0,0,Math.PI*2);ctx.fill();
+  R(x-6,y-4,4,3,P.gold);R(x+3,y-5,6,2,P.dirtL);
+}
+function drawBenchRow(x,y){
+  const len=64;
+  R(x,y-2,len,4,P.woodL);R(x,y+2,len,2,P.woodD);
+  R(x+4,y+4,2,5,P.woodD);R(x+20,y+4,2,5,P.woodD);R(x+40,y+4,2,5,P.woodD);R(x+len-6,y+4,2,5,P.woodD);
+  // Cushions
+  R(x+3,y-4,18,3,'#E8A860');R(x+26,y-4,18,3,'#D87848');R(x+46,y-4,14,3,'#E8A860');
+  // Flower boxes behind
+  for(let px=x+6;px<x+len-6;px+=14){
+    R(px,y-10,8,9,'#BC6C25');R(px+1,y-12,6,3,'#9C5A1C');
+    R(px+1,y-14,3,8,P.g3);R(px+3,y-16,2,10,P.g4);
+    R(px+2,y-17,3,3,P.yellow);R(px+4,y-18,2,2,P.yellowD);
+  }
+}
+function drawLampPost(x,y){
+  R(x,y+10,4,3,P.woodD);R(x+1,y-14,2,40,P.woodD);
+  R(x-3,y-18,10,6,P.gold);R(x-2,y-16,8,3,'#F4E8C8');
+  ctx.fillStyle='rgba(255,240,200,0.08)';ctx.beginPath();ctx.arc(x+2,y-6,24,0,Math.PI*2);ctx.fill();
+}
+function drawPlanter(x,y){
+  R(x,y+10,16,10,'#BC6C25');R(x+2,y+8,12,3,'#9C5A1C');
+  R(x+2,y-2,4,12,P.g2);R(x+5,y-4,5,14,P.g3);R(x+9,y-1,4,11,P.g4);R(x+11,y-3,3,12,P.g5);
+}
+
+// ═══ CHARACTERS ═══
+// Distributed across the plaza, clearly separated:
+const charDefs=[
+  {name:'白露',sx:'#FADFC8',hr:'#1C1C1C',hr2:'#3A3A3A',top:'#E8E0D5',t2:'#C8C0B5',bot:'#4E4E6E',
+   x:140,y:275,pose:'stand',dir:1,topic:5},
+  {name:'青叶',sx:'#F5D6C0',hr:'#1A1A2E',hr2:'#2D2D4A',top:'#2D6A4F',t2:'#1B4332',bot:'#5A5A6A',
+   x:230,y:275,pose:'stand',dir:-1,topic:2},
+  {name:'阿哲',sx:'#F4C9A8',hr:'#2D1B0E',hr2:'#4A2C18',top:'#264653',t2:'#1D353F',bot:'#3D3D5C',
+   x:320,y:278,pose:'stand',dir:1,topic:0},
+  {name:'蓝山',sx:'#F8D8C0',hr:'#2C1810',hr2:'#5A3830',top:'#457B9D',t2:'#1D3557',bot:'#4A4A5A',
+   x:400,y:275,pose:'stand',dir:-1,topic:4},
+  {name:'小棠',sx:'#FDE0C8',hr:'#5C2E0A',hr2:'#7A3E18',top:'#C84B31',t2:'#9E2B20',bot:'#4A4A6A',
+   x:470,y:278,pose:'stand',dir:1,topic:1},
+  {name:'言午',sx:'#F0C8A8',hr:'#4A3520',hr2:'#6B4E30',top:'#D4A843',t2:'#B8922E',bot:'#3D3A4A',
+   x:530,y:278,pose:'walk',dir:1,topic:3,wX:510,wR:[490,570]},
+];
+
+function drawChar(c,hv,f){
+  const s=2.2,cx=c.x,cy=c.y-(c.pose==='sit'?6:0),ox=cx-5*s,oy=cy-22*s;
+  ctx.save();
+  ctx.fillStyle=P.sh;ctx.beginPath();ctx.ellipse(cx,cy+3,13,3.5,0,0,Math.PI*2);ctx.fill();
+  if(c.pose==='stand'||c.pose==='lean'){
+    R(ox+2*s,oy+16*s,2*s,7*s,c.bot);R(ox+8*s,oy+16*s,2*s,7*s,c.bot);
+    R(ox+2*s,oy+22*s,2*s,1.5*s,'#2A2A3A');R(ox+8*s,oy+22*s,2*s,1.5*s,'#2A2A3A');
+  }else if(c.pose==='sit'){
+    R(ox+1*s,oy+15*s,3*s,3*s,c.bot);R(ox+1*s,oy+17*s,2*s,4*s,c.bot);R(ox+8*s,oy+17*s,2*s,4*s,c.bot);
+  }else{const l=Math.sin(f*0.15)*2.2;R(ox+2*s,oy+16*s,2*s,7*s+l,c.bot);R(ox+8*s,oy+16*s,2*s,7*s-l,c.bot)}
+  if(c.pose==='sit'){R(ox+1.5*s,oy+9*s,9*s,7*s,c.top);R(ox+1.5*s,oy+13*s,9*s,2.5*s,c.t2)}
+  else{R(ox+1.5*s,oy+9*s,9*s,8*s,c.top);R(ox+1.5*s,oy+14*s,9*s,2.5*s,c.t2)}
+  if(c.pose==='stand'){R(ox+0.5*s,oy+9*s,2*s,6*s,c.top);R(ox+9.5*s,oy+9*s,2*s,6*s,c.top)}
+  else if(c.pose==='sit'){R(ox+0.5*s,oy+9*s,2*s,5*s,c.top);R(ox+9.5*s,oy+10*s,2*s,4*s,c.top)}
+  else if(c.pose==='walk'){const a=Math.sin(f*0.15)*2;R(ox+0.5*s,oy+9*s,2*s,7*s+a,c.top);R(ox+9.5*s,oy+9*s,2*s,7*s-a,c.top)}
+  else{R(ox+0.5*s,oy+9*s,2*s,5*s,c.top);R(ox+9*s,oy+7*s,2*s,5*s,c.top)}
+  R(ox+0.5*s,oy-2*s,11*s,5*s,c.hr);R(ox+0.5*s,oy+1*s,2*s,5*s,c.hr);R(ox+9.5*s,oy+1*s,2*s,5*s,c.hr);
+  R(ox+2*s,oy,8*s,6*s,c.sx);
+  if(c.dir>=0){R(ox+5*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A');R(ox+9*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A')}
+  else{R(ox+4*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A');R(ox+8*s,oy+2.5*s,2*s,1.5*s,'#1A1A1A')}
+  R(ox+3*s,oy+3.5*s,1.5*s,1*s,'rgba(200,100,100,0.4)');R(ox+8.5*s,oy+3.5*s,1.5*s,1*s,'rgba(200,100,100,0.4)');
+  R(ox+6*s,oy+5*s,1.5*s,0.8*s,'#8B5E5E');
+  R(ox+1*s,oy-1*s,10*s,2*s,c.hr2);
+  if(Math.floor(f/150)%3===0&&f%150<5)R(ox+3*s,oy+3*s,7*s,1*s,c.sx);
+  if(hv){ctx.strokeStyle='rgba(255,215,0,0.7)';ctx.lineWidth=1.2;ctx.beginPath();ctx.roundRect(ox-2,oy-4,14*s,25*s,3);ctx.stroke();ctx.fillStyle=P.ink;ctx.font='bold 7px "Noto Sans SC"';ctx.textAlign='center';ctx.fillText('点击加入讨论',cx,oy-7);ctx.textAlign='start'}
+  ctx.fillStyle='#5A4A3A';ctx.font='6px "Noto Sans SC"';ctx.textAlign='center';ctx.fillText(c.name,cx,c.pose==='sit'?cy+2:cy+6);ctx.textAlign='start';
+  ctx.restore();
+  drawBubble(cx,oy-5,c.topic,hv?P.gold:P.ink);
+}
+
+function drawBubble(cx,ty,ti,color){
+  const t=topics[ti],txt=t.title.length>8?t.title.slice(0,8)+'…':t.title;
+  ctx.font='bold 7px "Noto Sans SC"';const tw=ctx.measureText(txt).width,bw=tw+12,bh=15,bx=cx-bw/2,by=ty-bh-3;
+  R(bx,by,bw,bh,'#FFFFFF');ctx.strokeStyle=color;ctx.lineWidth=0.8;ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle='#FFFFFF';ctx.beginPath();ctx.moveTo(cx-3,ty-3);ctx.lineTo(cx,ty+1);ctx.lineTo(cx+3,ty-3);ctx.fill();ctx.stroke();
+  ctx.fillStyle=color;ctx.fillText(txt,bx+5,by+12);
+}
+
+// ═══ Hit ═══
+function hit(mx,my){
+  const r=c.getBoundingClientRect(),sx=W/r.width,sy=H/r.height,cx=(mx-r.left)*sx,cy=(my-r.top)*sy;
+  for(let i=chars.length-1;i>=0;i--){const c2=chars[i],dx=cx-c2.x,dy=cy-(c2.y-22);if(dx*dx+dy*dy<24*24)return i}return -1;
+}
+
+// ═══ Main ═══
+let chars=charDefs.map(d=>({...d})),hv=-1,f=0;
+c.addEventListener('mousemove',e=>{const h=hit(e.clientX,e.clientY);if(h!==hv){hv=h;c.style.cursor=h>=0?'pointer':'default'}});
+c.addEventListener('click',e=>{const h=hit(e.clientX,e.clientY);if(h>=0)window.location.href='pixel-discussion-v3.html?topic='+encodeURIComponent(topics[chars[h].topic].title)});
+c.addEventListener('mouseleave',()=>{hv=-1});
+
+function tick(){
+  f++;
+  chars.forEach(c=>{if(c.pose==='walk'){c.wX+=c.dir*0.45;if(c.wX>c.wR[1]){c.dir=-1;c.wX=c.wR[1]}if(c.wX<c.wR[0]){c.dir=1;c.wX=c.wR[0]}c.x=c.wX}});
+  
+  drawSky();
+  drawLeftBuilding();
+  drawRightBuilding();
+  drawPlaza();
+  drawTitleArch();
+  drawBoard();            // hot topics board near right building
+  
+  // ── Scattered around plaza ──
+  drawSakura(55,185);       // big sakura tree (left)
+  drawChest(48,220);        // chest under sakura
+  drawPlanter(95,255);      // planter left of plaza
+  drawLampPost(105,185);    // lamp post
+  drawRoundTable(170,305);  // round table on grass
+  drawBenchRow(430,308);    // bench row with flowers (right)
+  drawFence(20,320,280);    // lower fence left
+  drawFence(380,320,250);   // lower fence right
+  // Path between fences
+  R(300,328,80,12,P.path);R(302,330,76,8,P.pathD);
+  
+  // Characters
+  chars.forEach((c,i)=>drawChar(c,i===hv,f));
+  
+  // Falling sakura petals
+  for(let i=0;i<3;i++){
+    const px=55+Math.sin((f+i*40)*0.02)*30,py=200+(f*0.3+i*30)%40;
+    R(px,py,2,2,P.sakuraL);R(px+1,py+1,1,1,P.sakura);
+  }
+  
+  requestAnimationFrame(tick);
+}tick();
+</script>
+</body>
+</html>

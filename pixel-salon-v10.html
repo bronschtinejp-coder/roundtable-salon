@@ -369,7 +369,142 @@ function drawBoard(){
 }
 
 // ═══════════════════════════════════════
-//  FURNITURE - Stardew style
+//  NOTIFICATION PANEL - left bottom
+// ═══════════════════════════════════════
+const notifications=[
+  {type:'invite',icon:'📩',text:'阿哲 邀请你参与讨论',topic:'社交系统设计的得与失',topicIdx:1},
+  {type:'like',icon:'👍',text:'你的观点被 5 人点赞',topic:'抽签玩法融合的成与败',topicIdx:0},
+  {type:'reply',icon:'💬',text:'你关注的话题有 3 条新回复',topic:'叙事与机制的边界',topicIdx:3},
+];
+const NX=30,NY=440,NW=220,NH=160;
+const notifItems=[];// clickable rects
+
+function drawNotificationPanel(f){
+  notifItems.length=0;
+  // Frame
+  R(NX-4,NY-4,NW+8,NH+8,P.wdD);
+  R(NX-2,NY-2,NW+4,NH+4,P.wd);
+  R(NX,NY,NW,NH,P.paper);
+  // Header
+  R(NX,NY,NW,22,P.wdD);
+  ctx.fillStyle=P.gold;ctx.font='bold 12px "Microsoft YaHei"';
+  ctx.fillText('🔔 通知',NX+8,NY+16);
+  // Count badge
+  const count=notifications.length;
+  const badgeX=NX+NW-28;
+  R(badgeX,NY+4,20,14,count>0?P.red:'#666');
+  ctx.fillStyle='#FFF';ctx.font='bold 10px "Microsoft YaHei"';
+  ctx.fillText(count.toString(),badgeX+6,NY+14);
+  
+  // Items
+  if(count===0){
+    ctx.fillStyle='#999';ctx.font='11px "Microsoft YaHei"';
+    ctx.fillText('暂无新通知',NX+12,NY+60);
+  }else{
+    notifications.forEach((n,i)=>{
+      const iy=NY+28+i*42;
+      const isHover=hoveredNotif===i;
+      // Item background
+      R(NX+4,iy,NW-8,38,isHover?'#F0E8D0':'#FFFDF5');
+      R(NX+4,iy,3,38,P.gold);
+      // Icon + text
+      ctx.font='12px "Microsoft YaHei"';
+      ctx.fillText(n.icon,NX+12,iy+16);
+      ctx.fillStyle=P.ink;ctx.font='bold 11px "Microsoft YaHei"';
+      ctx.fillText(n.text,NX+28,iy+16);
+      // Source topic
+      ctx.fillStyle='#8B6B4A';ctx.font='9px "Microsoft YaHei"';
+      ctx.fillText('→ '+n.topic.slice(0,12)+(n.topic.length>12?'…':''),NX+28,iy+30);
+      // Store clickable rect
+      notifItems.push({x:NX+4,y:iy,w:NW-8,h:38,topicIdx:n.topicIdx});
+    });
+  }
+}
+
+// ═══════════════════════════════════════
+//  FEATURED ANSWERS - right side below hot topics
+// ═══════════════════════════════════════
+const featuredAnswers=[
+  {text:'通用流派不是偷懒，是给玩家留了自己组合搭配的空间。工作量从30人周降到5人周，社区讨论量反增40%。',author:'言午',topic:'抽签玩法融合的成与败',tag:'Roguelike',topicIdx:0},
+  {text:'PVE模式下放开数值上限是对的，关键是让玩家"感觉"自己在变强，而不是单纯数字膨胀。',author:'青叶',topic:'开放世界内容密度',tag:'关卡',topicIdx:5},
+];
+const FX=940,FY=300,FW=310,FH=180;
+const featItems=[];// clickable rects
+
+function drawFeaturedBoard(f){
+  featItems.length=0;
+  // Frame
+  R(FX-4,FY-4,FW+8,FH+8,P.wdD);
+  R(FX-2,FY-2,FW+4,FH+4,P.wd);
+  R(FX,FY,FW,FH,P.paper);
+  // Header
+  R(FX,FY,FW,22,P.wdD);
+  ctx.fillStyle=P.gold;ctx.font='bold 12px "Microsoft YaHei"';
+  ctx.fillText('⭐ 今日精选',FX+8,FY+16);
+  
+  featuredAnswers.forEach((fa,i)=>{
+    const iy=FY+28+i*76;
+    const isHover=hoveredFeat===i;
+    // Card background
+    R(FX+6,iy,FW-12,70,isHover?'#F0E8D0':'#FFFDF5');
+    R(FX+6,iy,3,70,P.gold);
+    // Quote text (italic, truncated)
+    ctx.fillStyle='#5C4033';ctx.font='italic 11px "Microsoft YaHei"';
+    const qt=fa.text.length>36?fa.text.slice(0,36)+'…':fa.text;
+    ctx.fillText('"'+qt+'"',FX+16,iy+18);
+    // Second line if text is long
+    if(fa.text.length>36){
+      const qt2=fa.text.slice(36,72)+(fa.text.length>72?'…':'');
+      ctx.fillText(qt2,FX+16,iy+34);
+    }
+    // Author
+    ctx.fillStyle=P.ink;ctx.font='bold 10px "Microsoft YaHei"';
+    ctx.fillText('— '+fa.author,FX+16,iy+52);
+    // Source topic tag
+    R(FX+60,iy+44,50,13,P.gold+'33');
+    ctx.fillStyle=P.goldD;ctx.font='9px "Microsoft YaHei"';
+    ctx.fillText('#'+fa.tag,FX+62,iy+54);
+    // Source topic name
+    ctx.fillStyle='#8B6B4A';ctx.font='9px "Microsoft YaHei"';
+    ctx.fillText('来自: '+fa.topic.slice(0,10),FX+118,iy+54);
+    // Store clickable rect
+    featItems.push({x:FX+6,y:iy,w:FW-12,h:70,topicIdx:fa.topicIdx});
+  });
+}
+
+// ═══════════════════════════════════════
+//  CLICKABLE HOT TOPICS - store rects
+// ═══════════════════════════════════════
+const topicItems=[];// clickable rects for hot topic board items
+function storeTopicRects(){
+  topicItems.length=0;
+  const bx=940,by=50;
+  topics.forEach((t,i)=>{
+    const cy2=by+52+i*30;
+    topicItems.push({x:bx+10,y:cy2,w:290,h:28,topicIdx:i});
+  });
+}
+
+// ═══════════════════════════════════════
+//  UNIFIED HIT DETECTION
+// ═══════════════════════════════════════
+let hoveredNotif=-1,hoveredFeat=-1,hoveredTopic=-1;
+
+function getCanvasCoords(e){
+  const r=c.getBoundingClientRect();
+  return {x:(e.clientX-r.left)*W/r.width, y:(e.clientY-r.top)*H/r.height};
+}
+
+function hitPanel(mx,my,items){
+  for(let i=0;i<items.length;i++){
+    const it=items[i];
+    if(mx>=it.x&&mx<=it.x+it.w&&my>=it.y&&my<=it.y+it.h)return i;
+  }
+  return -1;
+}
+
+// ═══════════════════════════════════════
+//  ORIGINAL HIT DETECTION (characters)
 // ═══════════════════════════════════════
 function drawSofa(x,y){
   const sw=170,sh=60;
@@ -822,9 +957,40 @@ function hitChar(mx,my){
 //  INIT & MAIN LOOP
 // ═══════════════════════════════════════
 let chars=charDefs.map(d=>({...d})),hv=-1,f=0;
-c.addEventListener('mousemove',e=>{const h=hitChar(e.clientX,e.clientY);if(h!==hv){hv=h;c.style.cursor=h>=0?'pointer':'default'}});
-c.addEventListener('click',e=>{const h=hitChar(e.clientX,e.clientY);if(h>=0)window.location.href='pixel-discussion-v5.html?topic='+encodeURIComponent(topics[chars[h].topic].title)});
-c.addEventListener('mouseleave',()=>{hv=-1});
+c.addEventListener('mousemove',e=>{
+  const {x:mx,y:my}=getCanvasCoords(e);
+  // Check characters
+  let charHit=-1;
+  for(let i=chars.length-1;i>=0;i--){
+    const ch=chars[i],dx=mx-ch.x,dy=my-(ch.y-40);
+    if(dx*dx+dy*dy<55*55){charHit=i;break}
+  }
+  if(charHit!==hv)hv=charHit;
+  // Check panels
+  hoveredNotif=hitPanel(mx,my,notifItems);
+  hoveredFeat=hitPanel(mx,my,featItems);
+  hoveredTopic=hitPanel(mx,my,topicItems);
+  // Cursor
+  c.style.cursor=(hv>=0||hoveredNotif>=0||hoveredFeat>=0||hoveredTopic>=0)?'pointer':'default';
+});
+c.addEventListener('click',e=>{
+  const {x:mx,y:my}=getCanvasCoords(e);
+  // Characters
+  for(let i=chars.length-1;i>=0;i--){
+    const ch=chars[i],dx=mx-ch.x,dy=my-(ch.y-40);
+    if(dx*dx+dy*dy<55*55){window.location.href='pixel-discussion-v5.html?topic='+encodeURIComponent(topics[chars[i].topic].title);return}
+  }
+  // Notifications
+  const ni=hitPanel(mx,my,notifItems);
+  if(ni>=0){window.location.href='pixel-discussion-v5.html?topic='+encodeURIComponent(topics[notifItems[ni].topicIdx].title);return}
+  // Featured answers
+  const fi=hitPanel(mx,my,featItems);
+  if(fi>=0){window.location.href='pixel-discussion-v5.html?topic='+encodeURIComponent(topics[featItems[fi].topicIdx].title);return}
+  // Hot topics
+  const ti=hitPanel(mx,my,topicItems);
+  if(ti>=0){window.location.href='pixel-discussion-v5.html?topic='+encodeURIComponent(topics[topicItems[ti].topicIdx].title);return}
+});
+c.addEventListener('mouseleave',()=>{hv=-1;hoveredNotif=-1;hoveredFeat=-1;hoveredTopic=-1});
 
 function tick(){
   f++;
@@ -842,6 +1008,9 @@ function tick(){
   drawWindow(860,60,100,120,f);
   drawTitleSign();
   drawBoard();
+  storeTopicRects();
+  drawFeaturedBoard(f);
+  drawNotificationPanel(f);
   drawWallDecor(700,170);
   drawCandleWall(280,180,f);
   drawCandleWall(770,160,f);
@@ -852,9 +1021,9 @@ function tick(){
   drawHangingLantern(780,175,f);
   
   // Side decorations
-  drawBookshelf(1140,310);
+  drawBookshelf(1140,490);
   drawBarrelStack(50,540);
-  drawPlant(1200,500,1.2);
+  drawPlant(1200,660,1.2);
   drawPlant(80,370,0.9);
   
   // Main furniture
